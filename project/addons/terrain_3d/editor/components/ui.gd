@@ -21,6 +21,7 @@ const COLOR_ROUGHNESS := Color.ROYAL_BLUE
 const COLOR_AUTOSHADER := Color.DODGER_BLUE
 const COLOR_HOLES := Color.BLACK
 const COLOR_NAVIGATION := Color.REBECCA_PURPLE
+const COLOR_FOLIAGE := Color.CRIMSON
 const COLOR_PICK_COLOR := Color.WHITE
 const COLOR_PICK_HEIGHT := Color.DARK_RED
 const COLOR_PICK_ROUGH := Color.ROYAL_BLUE
@@ -138,6 +139,10 @@ func _on_tool_changed(p_tool: Terrain3DEditor.Tool, p_operation: Terrain3DEditor
 			to_show.push_back("size")
 			to_show.push_back("enable")
 
+		Terrain3DEditor.FOLIAGE:
+			to_show.push_back("size")
+			to_show.push_back("strength")
+			to_show.push_back("enable")
 
 		_:
 			pass
@@ -273,6 +278,10 @@ func update_decal() -> void:
 				decal.modulate.a = 1.0
 			Terrain3DEditor.NAVIGATION:
 				decal.modulate = COLOR_NAVIGATION
+				decal.modulate.a = 1.0
+			Terrain3DEditor.FOLIAGE:
+				decal.texture_albedo = ring_texture
+				decal.modulate = COLOR_FOLIAGE
 				decal.modulate.a = 1.0
 			_:
 				decal.modulate = Color.WHITE
