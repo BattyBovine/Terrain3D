@@ -365,31 +365,31 @@ void Terrain3DMaterial::_generate_region_blend_map() {
 }
 
 // Called from signal connected in Terrain3D, emitted by texture_list
-void Terrain3DMaterial::_update_texture_arrays(const Ref<Terrain3DTextureList> p_texture_list) {
+void Terrain3DMaterial::_update_texture_arrays(const Ref<Terrain3DAssets> p_assets) {
 	if (!_initialized) {
 		return;
 	}
 	LOG(INFO, "Updating texture arrays in shader");
-	if (p_texture_list.is_null()) {
+	if (p_assets.is_null()) {
 		LOG(ERROR, "Received null p_texture_list");
 		return;
 	}
 
-	RS->material_set_param(_material, "_texture_array_albedo", p_texture_list->get_albedo_array_rid());
-	RS->material_set_param(_material, "_texture_array_normal", p_texture_list->get_normal_array_rid());
-	RS->material_set_param(_material, "_texture_color_array", p_texture_list->get_texture_colors());
-	RS->material_set_param(_material, "_texture_uv_scale_array", p_texture_list->get_texture_uv_scales());
-	RS->material_set_param(_material, "_texture_uv_rotation_array", p_texture_list->get_texture_uv_rotations());
+	RS->material_set_param(_material, "_texture_array_albedo", p_assets->get_albedo_array_rid());
+	RS->material_set_param(_material, "_texture_array_normal", p_assets->get_normal_array_rid());
+	RS->material_set_param(_material, "_texture_color_array", p_assets->get_texture_colors());
+	RS->material_set_param(_material, "_texture_uv_scale_array", p_assets->get_texture_uv_scales());
+	RS->material_set_param(_material, "_texture_uv_rotation_array", p_assets->get_texture_uv_rotations());
 
 	// Enable checkered view if texture_count is 0, disable if not
-	if (p_texture_list->get_texture_count() == 0) {
+	if (p_assets->get_texture_count() == 0) {
 		if (_debug_view_checkered == false) {
 			set_show_checkered(true);
 			LOG(DEBUG, "No textures, enabling checkered view");
 		}
 	} else {
 		set_show_checkered(false);
-		LOG(DEBUG, "Texture count >0: ", p_texture_list->get_texture_count(), ", disabling checkered view");
+		LOG(DEBUG, "Texture count >0: ", p_assets->get_texture_count(), ", disabling checkered view");
 	}
 }
 

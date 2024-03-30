@@ -79,7 +79,7 @@ private:
 	void _update_shader();
 	void _update_regions(const Array &p_args);
 	void _generate_region_blend_map();
-	void _update_texture_arrays(const Ref<Terrain3DTextureList> p_texture_list);
+	void _update_texture_arrays(const Ref<Terrain3DAssets> p_assets);
 	void _set_region_size(int p_size);
 	void _set_shader_parameters(const Dictionary &p_dict);
 	Dictionary _get_shader_parameters() const { return _shader_params; }
