@@ -1,119 +1,367 @@
 @tool
 extends PanelContainer
+#class_name Terrain3DAssetDock
 
-signal placement_changed(index: int)
-signal resource_changed(resource: Resource, index: int)
-signal resource_inspected(resource: Resource)
-signal resource_selected
 
-var list: ListContainer
-var entries: Array[ListEntry]
-var selected_index: int = 0
-var focus_style: StyleBox
+const PS_DOCK_SLOT: String = "terrain3d/config/dock_slot"
+const PS_DOCK_TILE_SIZE: String = "terrain3d/config/dock_tile_size"
+const PS_DOCK_FLOATING: String = "terrain3d/config/dock_floating"
+const PS_DOCK_PINNED: String = "terrain3d/config/dock_always_on_top"
+const PS_DOCK_WINDOW_POSITION: String = "terrain3d/config/dock_window_position"
+const PS_DOCK_WINDOW_SIZE: String = "terrain3d/config/dock_window_size"
 
-@onready var placement_option: OptionButton = $VBox/PlacementHBox/Options
-@onready var placement_pin: Button = $VBox/PlacementHBox/Pinned
-@onready var size_slider: HSlider = $VBox/SizeSlider
+var texture_list: ListContainer
+var mesh_list: ListContainer
+var _current_list: ListContainer
+
+var placement_opt: OptionButton
+var floating_btn: Button
+var pinned_btn: Button
+var size_slider: HSlider
+var box: BoxContainer
+var buttons: BoxContainer
+var textures_btn: Button
+var meshes_btn: Button
+var asset_container: ScrollContainer
+
+# Used only for editor, so change to single visible/hiddden
+enum {
+	HIDDEN = -1,
+	SIDEBAR = 0,
+	BOTTOM = 1,
+	WINDOWED = 2,
+}
+var state: int = HIDDEN
+
+var window: Window
+var _godot_editor_window: Window # The main Godot Editor window
+var _godot_last_state: Window.Mode = Window.MODE_FULLSCREEN
+
+enum {
+	POS_LEFT_UL = 0,
+	POS_LEFT_BL = 1,
+	POS_LEFT_UR = 2,
+	POS_LEFT_BR = 3,
+	POS_RIGHT_UL = 4,
+	POS_RIGHT_BL = 5,
+	POS_RIGHT_UR = 6,
+	POS_RIGHT_BR = 7,
+	POS_BOTTOM = 8,
+	POS_MAX = 9,
+}
+var slot: int = POS_BOTTOM
+var _initialized: bool = false
+var plugin: EditorPlugin
+
+	
+func initialize(p_plugin: EditorPlugin) -> void:
+	if p_plugin:
+		plugin = p_plugin
+
+	# Get editor window. Structure is root:Window/EditorNode/Base Control
+	_godot_editor_window = plugin.get_editor_interface().get_base_control().get_parent().get_parent()
+	_godot_last_state = _godot_editor_window.mode
+	
+	placement_opt = $Box/Buttons/PlacementOpt
+	pinned_btn = $Box/Buttons/Pinned
+	floating_btn = $Box/Buttons/Floating
+	size_slider = $Box/Buttons/SizeSlider
+	box = $Box
+	buttons = $Box/Buttons
+	textures_btn = $Box/Buttons/TexturesBtn
+	meshes_btn = $Box/Buttons/MeshesBtn
+	asset_container = $Box/ScrollContainer
+
+	texture_list = ListContainer.new()
+	texture_list.plugin = plugin
+	asset_container.add_child(texture_list)
+	mesh_list = ListContainer.new()
+	mesh_list.plugin = plugin
+	mesh_list.visible = false
+	asset_container.add_child(mesh_list)
+	_current_list = texture_list
+
+	load_project_settings()
+
+	# Connect signals
+	resized.connect(update_layout)
+	textures_btn.pressed.connect(_on_textures_pressed)
+	meshes_btn.pressed.connect(_on_meshes_pressed)
+	placement_opt.item_selected.connect(set_slot)
+	floating_btn.pressed.connect(make_dock_float)
+	pinned_btn.toggled.connect(_on_pin_changed)
+	pinned_btn.visible = false
+	size_slider.value_changed.connect(_on_slider_changed)	
+
+	_initialized = true
+	update_dock(plugin.visible)
+	update_layout()
 
 
 func _ready() -> void:
-	placement_option.item_selected.connect(_on_placement_selected)
-	size_slider.value_changed.connect(_on_slider_changed)
+	if not _initialized:
+		return
 	
-	list = ListContainer.new()
-	list.set_v_size_flags(SIZE_EXPAND_FILL)
-	list.set_h_size_flags(SIZE_EXPAND_FILL)
-	$VBox/ScrollContainer.add_child(list)
-
-	# Copy theme from the editor, but since its a tool script, avoid saving icon resources in tscn
-	if EditorScript.new().get_editor_interface().get_edited_scene_root() != self:
-		set("theme_override_styles/panel", get_theme_stylebox("panel", "Panel"))
-		$VBox/Label.set("theme_override_styles/normal", get_theme_stylebox("bg", "EditorInspectorCategory"))
-		$VBox/Label.set("theme_override_fonts/font", get_theme_font("bold", "EditorFonts"))
-		$VBox/Label.set("theme_override_font_sizes/font_size",get_theme_font_size("bold_size", "EditorFonts"))
-		placement_pin.icon = get_theme_icon("Pin", "EditorIcons")
-		placement_pin.text = ""
-
-	# Setup style for selected assets
-	focus_style = get_theme_stylebox("focus", "Button").duplicate()
-	focus_style.set_border_width_all(2)
-	focus_style.set_border_color(Color(1, 1, 1, .67))
+	# Setup styles
+	set("theme_override_styles/panel", get_theme_stylebox("panel", "Panel"))
+	# Avoid saving icon resources in tscn when editing w/ a tool script
+	if plugin.get_editor_interface().get_edited_scene_root() != self:
+		pinned_btn.icon = get_theme_icon("Pin", "EditorIcons")
+		pinned_btn.text = ""
+		floating_btn.icon = get_theme_icon("MakeFloating", "EditorIcons")
+		floating_btn.text = ""
 
 
-func _on_placement_selected(index: int) -> void:
-	emit_signal("placement_changed", index)
+## Dock placement
+
+func set_slot(p_slot: int) -> void:
+	p_slot = clamp(p_slot, 0, POS_MAX-1)
+	
+	if slot != p_slot:
+		slot = p_slot
+		placement_opt.selected = slot
+		save_project_settings()
+		plugin.select_terrain()
+		update_dock(plugin.visible)
+
+
+func remove_dock(p_force: bool = false) -> void:
+	if state == SIDEBAR:
+		plugin.remove_control_from_docks(self)
+		state = HIDDEN
+
+	elif state == BOTTOM:
+		plugin.remove_control_from_bottom_panel(self)
+		state = HIDDEN
+
+	# If windowed and destination is not window or final exit, otherwise leave
+	elif state == WINDOWED and p_force:
+		if not window:
+			return
+		var parent: Node = get_parent()
+		if parent:
+			parent.remove_child(self)
+			_godot_editor_window.mouse_entered.disconnect(_on_godot_window_entered)
+			_godot_editor_window.focus_entered.disconnect(_on_godot_focus_entered)
+			_godot_editor_window.focus_exited.disconnect(_on_godot_focus_exited)
+			window.hide()
+			window.queue_free()
+			window = null
+		floating_btn.button_pressed = false
+		floating_btn.visible = true
+		pinned_btn.visible = false
+		placement_opt.visible = true
+		state = HIDDEN
+		update_dock(plugin.visible) # return window to side/bottom
+
+
+func update_dock(p_visible: bool) -> void:
+	update_assets()
+	if not _initialized:
+		return
+
+	if window:
+		return
+	elif floating_btn.button_pressed:
+		# No window, but floating button pressed, occurs when from project settings
+		make_dock_float()
+		return
+
+	remove_dock()
+	# Add dock to new destination
+	# Sidebar
+	if slot < POS_BOTTOM:
+		state = SIDEBAR
+		plugin.add_control_to_dock(slot, self)
+	elif slot == POS_BOTTOM:
+		state = BOTTOM
+		plugin.add_control_to_bottom_panel(self, "Terrain3D")
+		if p_visible:
+			plugin.make_bottom_panel_item_visible(self)
+		
+
+func update_layout() -> void:
+	if not _initialized:
+		return
+
+	# Detect if we have a new window from Make floating, grab it so we can free it properly
+	if not window and get_parent() and get_parent().get_parent() is Window:
+		window = get_parent().get_parent()
+		make_dock_float()
+		return # Will call this function again upon display
+
+	var size_parent: Control = size_slider.get_parent()
+	# Vertical layout in window / sidebar
+	if window or slot < POS_BOTTOM:
+		box.vertical = true
+		buttons.vertical = false
+
+		if size.x >= 500 and size_parent != buttons:
+			size_slider.reparent(buttons)
+			buttons.move_child(size_slider, 3)
+		elif size.x < 500 and size_parent != box:
+			size_slider.reparent(box)
+			box.move_child(size_slider, 1)
+		floating_btn.reparent(buttons)
+		buttons.move_child(floating_btn, 4)
+
+	# Wide layout on bottom bar
+	else:
+		size_slider.reparent(buttons)
+		buttons.move_child(size_slider, 3)
+		floating_btn.reparent(box)
+		box.vertical = false
+		buttons.vertical = true
+
+	save_project_settings()
+
+
+## Dock Button handlers
+
+
+func _on_pin_changed(toggled: bool) -> void:
+	if window:
+		window.always_on_top = pinned_btn.button_pressed
+	save_project_settings()
 
 
 func _on_slider_changed(value: float) -> void:
-	if list:
-		list.set_entry_size(value)
+	if texture_list:
+		texture_list.set_entry_width(value)
+	if mesh_list:
+		mesh_list.set_entry_width(value)
+	save_project_settings()
 
 
-func move_slider(to_side: bool) -> void:
-	if to_side and size_slider.get_parent() != $VBox:
-		size_slider.reparent($VBox)
-		$VBox.move_child(size_slider, 2)
-		size_slider.custom_minimum_size = Vector2(0, 0)
-	elif not to_side and size_slider.get_parent() == $VBox:
-		size_slider.reparent($VBox/PlacementHBox)
-		$VBox/PlacementHBox.move_child(size_slider, 2)
-		size_slider.custom_minimum_size = Vector2(300, 10)
+func _on_textures_pressed() -> void:
+	_current_list = texture_list
+	texture_list.update_asset_list()
+	texture_list.visible = true
+	mesh_list.visible = false
 
 
-func clear() -> void:
-	for i in entries:
-		i.get_parent().remove_child(i)
-		i.queue_free()
-	entries.clear()
+func _on_meshes_pressed() -> void:
+	_current_list = mesh_list
+	mesh_list.update_asset_list()
+	mesh_list.visible = true
+	texture_list.visible = false
 
 
-func add_item(p_resource: Resource = null) -> void:
-	var entry: ListEntry = ListEntry.new()
-	entry.focus_style = focus_style
-	var index: int = entries.size()
+## Update Dock Contents
+
+
+func update_assets() -> void:
+	if not _initialized:
+		return
 	
-	entry.set_edited_resource(p_resource)
-	entry.selected.connect(set_selected_index.bind(index))
-	entry.inspected.connect(notify_resource_inspected)
-	entry.changed.connect(notify_resource_changed.bind(index))
+	# Verify signals to individual lists
+	if plugin.is_terrain_valid() and plugin.terrain.assets:
+		if not plugin.terrain.assets.textures_changed.is_connected(texture_list.update_asset_list):
+			plugin.terrain.assets.textures_changed.connect(texture_list.update_asset_list)
+		if not plugin.terrain.assets.textures_changed.is_connected(mesh_list.update_asset_list):
+			plugin.terrain.assets.textures_changed.connect(mesh_list.update_asset_list)
+		#if not plugin.terrain.assets.meshes_changed.is_connected(mesh_list.update_asset_list):
+			#plugin.terrain.assets.meshes_changed.connect(mesh_list.update_asset_list)
+
+	_current_list.update_asset_list()
+
+
+## Window Management
+
+
+func make_dock_float() -> void:
+	# If already created (eg from editor Make Floating)	
+	if not window:
+		remove_dock()
+		create_window()
+
+	state = WINDOWED
+	pinned_btn.visible = true
+	floating_btn.visible = false
+	placement_opt.visible = false
+	window.title = "Terrain3D Asset Dock"
+	window.always_on_top = pinned_btn.button_pressed
+	window.close_requested.connect(remove_dock.bind(true))
+	visible = true # Is hidden when pops off of bottom. ??
+	_godot_editor_window.grab_focus()
+
+
+func create_window() -> void:
+	window = Window.new()
+	window.wrap_controls = true
+	var mc := MarginContainer.new()
+	mc.set_anchors_preset(PRESET_FULL_RECT, false)
+	mc.add_child(self)
+	window.add_child(mc)
+	window.set_transient(false)
+	window.set_size(ProjectSettings.get_setting(PS_DOCK_WINDOW_SIZE, Vector2i(512, 512)))
+	window.set_position(ProjectSettings.get_setting(PS_DOCK_WINDOW_POSITION, Vector2i(704, 284)))
+	plugin.add_child(window)
+	window.show()
+	window.window_input.connect(_on_window_input)
+	window.focus_exited.connect(_on_window_focus_exited)
+	_godot_editor_window.mouse_entered.connect(_on_godot_window_entered)
+	_godot_editor_window.focus_entered.connect(_on_godot_focus_entered)
+	_godot_editor_window.focus_exited.connect(_on_godot_focus_exited)
+
+
+func _on_window_input(event: InputEvent) -> void:
+	# Capture CTRL+S when doc focused to save scene)
+	if event is InputEventKey and event.keycode == KEY_S and event.pressed and event.is_command_or_control_pressed():
+		save_project_settings()
+		plugin.get_editor_interface().save_scene()
+
+
+func _on_window_focus_exited() -> void:
+	# Capture window position w/o other changes
+	save_project_settings()
+
+
+func _on_godot_window_entered() -> void:
+	if is_instance_valid(window) and window.has_focus():
+		_godot_editor_window.grab_focus()
+
+
+func _on_godot_focus_entered() -> void:
+	# If asset dock is windowed, and Godot was minimized, and now is not, restore asset dock window
+	if is_instance_valid(window):
+		if _godot_last_state == Window.MODE_MINIMIZED and _godot_editor_window.mode != Window.MODE_MINIMIZED:
+			window.show()
+			_godot_last_state = _godot_editor_window.mode
+			_godot_editor_window.grab_focus()
+
+
+func _on_godot_focus_exited() -> void:
+	if is_instance_valid(window) and _godot_editor_window.mode == Window.MODE_MINIMIZED:
+		window.hide()
+		_godot_last_state = _godot_editor_window.mode
+
+
+## Manage Project Settings
+
+
+func load_project_settings() -> void:
+	floating_btn.button_pressed = ProjectSettings.get_setting(PS_DOCK_FLOATING, false)
+	pinned_btn.button_pressed = ProjectSettings.get_setting(PS_DOCK_PINNED, true)
+	size_slider.value = ProjectSettings.get_setting(PS_DOCK_TILE_SIZE, 83)
+	set_slot(ProjectSettings.get_setting(PS_DOCK_SLOT, POS_BOTTOM))
+	_on_slider_changed(size_slider.value)
+	# Window pos/size set on window creation in update_dock
+	update_dock(plugin.visible)
 	
-	if p_resource:
-		entry.set_selected(index == selected_index)
-		if not p_resource.id_changed.is_connected(set_selected_after_swap):
-			p_resource.id_changed.connect(set_selected_after_swap)
 	
-	list.add_child(entry)
-	entries.push_back(entry)
+func save_project_settings() -> void:
+	if not _initialized:
+		return
+	ProjectSettings.set_setting(PS_DOCK_SLOT, slot)
+	ProjectSettings.set_setting(PS_DOCK_TILE_SIZE, size_slider.value)
+	ProjectSettings.set_setting(PS_DOCK_FLOATING, floating_btn.button_pressed)
+	ProjectSettings.set_setting(PS_DOCK_PINNED, pinned_btn.button_pressed)
+	if window:
+		ProjectSettings.set_setting(PS_DOCK_WINDOW_SIZE, window.size)
+		ProjectSettings.set_setting(PS_DOCK_WINDOW_POSITION, window.position)
 
-
-func set_selected_after_swap(p_old_index: int, p_new_index: int) -> void:
-	set_selected_index(clamp(p_new_index, 0, entries.size() - 2))
-
-
-func set_selected_index(p_index: int) -> void:
-	selected_index = p_index
-	emit_signal("resource_selected")
-	
-	for i in entries.size():
-		var entry: ListEntry = entries[i]
-		entry.set_selected(i == selected_index)
-
-
-func get_selected_index() -> int:
-	return selected_index
-
-
-func notify_resource_inspected(p_resource: Resource) -> void:
-	emit_signal("resource_inspected", p_resource)
-
-
-func notify_resource_changed(p_resource: Resource, p_index: int) -> void:
-	emit_signal("resource_changed", p_resource, p_index)
-	if !p_resource:
-		var last_offset: int = 2
-		if p_index == entries.size()-2:
-			last_offset = 3
-		selected_index = clamp(selected_index, 0, entries.size() - last_offset)	
+	ProjectSettings.save()
 
 
 ##############################################################
@@ -122,14 +370,131 @@ func notify_resource_changed(p_resource: Resource, p_index: int) -> void:
 
 	
 class ListContainer extends Container:
+	var entries: Array[ListEntry]
 	var height: float = 0
 	var width: float = 83
+	var plugin: EditorPlugin
+	var selected_index: int = 0
+
+	var focus_style: StyleBox
+
+	
+	func _ready() -> void:
+		set_v_size_flags(SIZE_EXPAND_FILL)
+		set_h_size_flags(SIZE_EXPAND_FILL)
+		focus_style = get_theme_stylebox("focus", "Button").duplicate()
+		focus_style.set_border_width_all(2)
+		focus_style.set_border_color(Color(1, 1, 1, .67))
+
+
+	func clear() -> void:
+		for e in entries:
+			e.get_parent().remove_child(e)
+			e.queue_free()
+		entries.clear()
+
+
+	func update_asset_list(p_args: Array = Array()) -> void:
+
+		clear()
+		
+		var t: Terrain3D
+		if plugin.is_terrain_valid():
+			t = plugin.terrain
+		elif plugin.is_terrain_valid(plugin._last_terrain):
+			t = plugin._last_terrain
+		else:
+			return
+		
+		if t.assets:
+			var texture_count: int = t.assets.get_texture_count()
+			for i in texture_count:
+				var texture: Terrain3DTexture = t.assets.get_texture(i)
+				add_item(texture)
+				
+			if texture_count < Terrain3DAssets.MAX_TEXTURES:
+				add_item()
+				
+
+	func add_item(p_resource: Resource = null) -> void:
+		var entry: ListEntry = ListEntry.new()
+		entry.focus_style = focus_style
+		var index: int = entries.size()
+		
+		entry.set_edited_resource(p_resource)
+		entry.selected.connect(set_selected_index.bind(index))
+		entry.inspected.connect(_on_resource_inspected)
+		entry.changed.connect(_on_resource_changed.bind(index))
+		
+		if p_resource:
+			entry.set_selected(index == selected_index)
+			if not p_resource.id_changed.is_connected(set_selected_after_swap):
+				p_resource.id_changed.connect(set_selected_after_swap)
+		
+		add_child(entry)
+		entries.push_back(entry)
 	
 	
-	func set_entry_size(value: float) -> void:
+	func set_selected_after_swap(p_old_index: int, p_new_index: int) -> void:
+		set_selected_index(clamp(p_new_index, 0, entries.size() - 2))
+
+
+	func set_selected_index(p_index: int) -> void:
+		selected_index = p_index
+		
+		for i in entries.size():
+			var entry: ListEntry = entries[i]
+			entry.set_selected(i == selected_index)
+		
+		plugin.select_terrain()
+
+		# If not on a texture painting tool, then switch to Paint
+		if plugin.editor.get_tool() != Terrain3DEditor.TEXTURE:
+			var paint_btn: Button = plugin.ui.toolbar.get_node_or_null("PaintBaseTexture")
+			if paint_btn:
+				paint_btn.set_pressed(true)
+				plugin.ui._on_tool_changed(Terrain3DEditor.TEXTURE, Terrain3DEditor.REPLACE)
+		# Update editor with selected brush
+		plugin.ui._on_setting_changed()
+
+
+	func _on_resource_inspected(p_texture: Resource) -> void:
+		await get_tree().create_timer(.01).timeout
+		plugin.get_editor_interface().edit_resource(p_texture)
+	
+	
+	func _on_resource_changed(p_resource: Resource, p_index: int) -> void:
+		if not plugin.is_terrain_valid():
+			plugin.select_terrain()
+			await get_tree().create_timer(.01).timeout
+			
+		if plugin.is_terrain_valid():
+			# If removing last entry and its selected, clear inspector
+			if not p_resource and p_index == get_selected_index() and \
+					get_selected_index() == entries.size() - 2:
+				plugin.get_editor_interface().inspect_object(null)			
+			plugin.terrain.get_assets().set_texture(p_index, p_resource)
+
+		# If null resource, remove last 
+		if not p_resource:
+			var last_offset: int = 2
+			if p_index == entries.size()-2:
+				last_offset = 3
+			set_selected_index(clamp(selected_index, 0, entries.size() - last_offset))
+
+
+	func get_selected_index() -> int:
+		return selected_index
+
+
+	func set_entry_width(value: float) -> void:
 		width = clamp(value, 56, 256)
 		redraw()
 
+
+	func get_entry_width() -> float:
+		return width
+	
 
 	func redraw() -> void:
 		height = 0
@@ -147,6 +512,7 @@ class ListContainer extends Container:
 				index += 1
 
 
+	# Needed to enable ScrollContainer scroll bar
 	func _get_minimum_size() -> Vector2:
 		return Vector2(0, height)
 
@@ -180,7 +546,7 @@ class ListEntry extends VBoxContainer:
 	@onready var edit_icon: Texture2D = get_theme_icon("Edit", "EditorIcons")
 	@onready var background: StyleBox = get_theme_stylebox("pressed", "Button")
 	var focus_style: StyleBox
-	
+
 
 	func _ready() -> void:
 		var icon_size: Vector2 = Vector2(12, 12)
