@@ -78,10 +78,9 @@ occlusion_culling/use_occlusion_culling=true
 
 [terrain3d]
 
-config/dock_always_on_top=false
-config/dock_slot=8
-config/dock_tile_size=83.0
-config/dock_floating=false
 config/dock_always_on_top=true
-config/dock_window_size=Vector2i(512, 512)
+config/dock_slot=7
+config/dock_tile_size=78.0
+config/dock_floating=false
+config/dock_window_size=Vector2i(605, 512)
 config/dock_window_position=Vector2i(704, 284)

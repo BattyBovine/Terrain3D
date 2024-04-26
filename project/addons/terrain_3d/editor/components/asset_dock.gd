@@ -74,9 +74,11 @@ func initialize(p_plugin: EditorPlugin) -> void:
 
 	texture_list = ListContainer.new()
 	texture_list.plugin = plugin
+	texture_list.type = ListContainer.Type.TEXTURES
 	asset_container.add_child(texture_list)
 	mesh_list = ListContainer.new()
 	mesh_list.plugin = plugin
+	mesh_list.type = ListContainer.Type.MESHES
 	mesh_list.visible = false
 	asset_container.add_child(mesh_list)
 	_current_list = texture_list
@@ -92,6 +94,9 @@ func initialize(p_plugin: EditorPlugin) -> void:
 	pinned_btn.toggled.connect(_on_pin_changed)
 	pinned_btn.visible = false
 	size_slider.value_changed.connect(_on_slider_changed)	
+
+	meshes_btn.add_theme_font_size_override("font_size", 16 * EditorInterface.get_editor_scale())
+	textures_btn.add_theme_font_size_override("font_size", 16 * EditorInterface.get_editor_scale())
 
 	_initialized = true
 	update_dock(plugin.visible)
@@ -238,6 +243,8 @@ func _on_textures_pressed() -> void:
 	texture_list.update_asset_list()
 	texture_list.visible = true
 	mesh_list.visible = false
+	textures_btn.button_pressed = true
+	meshes_btn.button_pressed = false
 
 
 func _on_meshes_pressed() -> void:
@@ -245,6 +252,8 @@ func _on_meshes_pressed() -> void:
 	mesh_list.update_asset_list()
 	mesh_list.visible = true
 	texture_list.visible = false
+	meshes_btn.button_pressed = true
+	textures_btn.button_pressed = false
 
 
 ## Update Dock Contents
@@ -258,10 +267,8 @@ func update_assets() -> void:
 	if plugin.is_terrain_valid() and plugin.terrain.assets:
 		if not plugin.terrain.assets.textures_changed.is_connected(texture_list.update_asset_list):
 			plugin.terrain.assets.textures_changed.connect(texture_list.update_asset_list)
-		if not plugin.terrain.assets.textures_changed.is_connected(mesh_list.update_asset_list):
-			plugin.terrain.assets.textures_changed.connect(mesh_list.update_asset_list)
-		#if not plugin.terrain.assets.meshes_changed.is_connected(mesh_list.update_asset_list):
-			#plugin.terrain.assets.meshes_changed.connect(mesh_list.update_asset_list)
+		if not plugin.terrain.assets.meshes_changed.is_connected(mesh_list.update_asset_list):
+			plugin.terrain.assets.meshes_changed.connect(mesh_list.update_asset_list)
 
 	_current_list.update_asset_list()
 
@@ -370,12 +377,14 @@ func save_project_settings() -> void:
 
 	
 class ListContainer extends Container:
+	enum Type { TEXTURES, MESHES }
+	
+	var plugin: EditorPlugin
+	var type: Type = Type.TEXTURES
 	var entries: Array[ListEntry]
+	var selected_index: int = 0
 	var height: float = 0
 	var width: float = 83
-	var plugin: EditorPlugin
-	var selected_index: int = 0
-
 	var focus_style: StyleBox
 
 	
@@ -395,7 +404,6 @@ class ListContainer extends Container:
 
 
 	func update_asset_list(p_args: Array = Array()) -> void:
-
 		clear()
 		
 		var t: Terrain3D
@@ -406,7 +414,10 @@ class ListContainer extends Container:
 		else:
 			return
 		
-		if t.assets:
+		if not t.assets:
+			return
+		
+		if type == Type.TEXTURES:
 			var texture_count: int = t.assets.get_texture_count()
 			for i in texture_count:
 				var texture: Terrain3DTexture = t.assets.get_texture(i)
@@ -414,6 +425,8 @@ class ListContainer extends Container:
 				
 			if texture_count < Terrain3DAssets.MAX_TEXTURES:
 				add_item()
+		else:
+			add_item()
 				
 
 	func add_item(p_resource: Resource = null) -> void:
@@ -425,17 +438,17 @@ class ListContainer extends Container:
 		entry.selected.connect(set_selected_index.bind(index))
 		entry.inspected.connect(_on_resource_inspected)
 		entry.changed.connect(_on_resource_changed.bind(index))
+		entry.type = type
+		add_child(entry)
+		entries.push_back(entry)
 		
 		if p_resource:
 			entry.set_selected(index == selected_index)
 			if not p_resource.id_changed.is_connected(set_selected_after_swap):
 				p_resource.id_changed.connect(set_selected_after_swap)
-		
-		add_child(entry)
-		entries.push_back(entry)
+
 	
-	
-	func set_selected_after_swap(p_old_index: int, p_new_index: int) -> void:
+	func set_selected_after_swap(p_type: int, p_old_index: int, p_new_index: int) -> void:
 		set_selected_index(clamp(p_new_index, 0, entries.size() - 2))
 
 
@@ -449,7 +462,7 @@ class ListContainer extends Container:
 		plugin.select_terrain()
 
 		# If not on a texture painting tool, then switch to Paint
-		if plugin.editor.get_tool() != Terrain3DEditor.TEXTURE:
+		if type == Type.TEXTURES and plugin.editor.get_tool() != Terrain3DEditor.TEXTURE:
 			var paint_btn: Button = plugin.ui.toolbar.get_node_or_null("PaintBaseTexture")
 			if paint_btn:
 				paint_btn.set_pressed(true)
@@ -458,9 +471,9 @@ class ListContainer extends Container:
 		plugin.ui._on_setting_changed()
 
 
-	func _on_resource_inspected(p_texture: Resource) -> void:
+	func _on_resource_inspected(p_resource: Resource) -> void:
 		await get_tree().create_timer(.01).timeout
-		plugin.get_editor_interface().edit_resource(p_texture)
+		plugin.get_editor_interface().edit_resource(p_resource)
 	
 	
 	func _on_resource_changed(p_resource: Resource, p_index: int) -> void:
@@ -469,11 +482,16 @@ class ListContainer extends Container:
 			await get_tree().create_timer(.01).timeout
 			
 		if plugin.is_terrain_valid():
+			if type == Type.TEXTURES:
+				plugin.terrain.get_assets().set_texture(p_index, p_resource)
+			else:
+				pass
+
 			# If removing last entry and its selected, clear inspector
 			if not p_resource and p_index == get_selected_index() and \
 					get_selected_index() == entries.size() - 2:
 				plugin.get_editor_interface().inspect_object(null)			
-			plugin.terrain.get_assets().set_texture(p_index, p_resource)
+				
 
 		# If null resource, remove last 
 		if not p_resource:
@@ -488,7 +506,7 @@ class ListContainer extends Container:
 
 
 	func set_entry_width(value: float) -> void:
-		width = clamp(value, 56, 256)
+		width = clamp(value, 56, 230)
 		redraw()
 
 
@@ -529,10 +547,11 @@ class ListContainer extends Container:
 
 class ListEntry extends VBoxContainer:
 	signal selected()
-	signal changed(resource: Terrain3DTexture)
-	signal inspected(resource: Terrain3DTexture)
+	signal changed(resource: Resource)
+	signal inspected(resource: Resource)
 	
-	var resource: Terrain3DTexture
+	var resource: Resource
+	var type := ListContainer.Type.TEXTURES
 	var drop_data: bool = false
 	var is_hovered: bool = false
 	var is_selected: bool = false
@@ -579,8 +598,11 @@ class ListEntry extends VBoxContainer:
 		name_label.add_theme_font_size_override("font_size", 15)
 		name_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		name_label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
-		name_label.text = "Add New"
-		
+		if type == ListContainer.Type.TEXTURES:
+			name_label.text = "Add Texture"
+		else:
+			name_label.text = "Add Mesh"
+
 		
 	func _notification(p_what) -> void:
 		match p_what:
@@ -590,12 +612,16 @@ class ListEntry extends VBoxContainer:
 					draw_style_box(background, rect)
 					draw_texture(add_icon, (get_size() / 2) - (add_icon.get_size() / 2))
 				else:
-					name_label.text = resource.get_name()
-					self_modulate = resource.get_albedo_color()
-					var texture: Texture2D = resource.get_albedo_texture()
-					if texture:
-						draw_texture_rect(texture, rect, false)
-						texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST_WITH_MIPMAPS
+					if type == ListContainer.Type.TEXTURES:
+						name_label.text = (resource as Terrain3DTexture).get_name()
+						self_modulate = resource.get_albedo_color()
+						var texture: Texture2D = resource.get_albedo_texture()
+						if texture:
+							draw_texture_rect(texture, rect, false)
+							texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST_WITH_MIPMAPS
+					else:
+						name_label.text = (resource as Terrain3DMeshInstance).get_name()
+						draw_rect(rect, Color(randf(),randf(),randf(),1.))
 				name_label.add_theme_font_size_override("font_size", 4 + rect.size.x/10)
 				if drop_data:
 					draw_style_box(focus_style, rect)
@@ -621,7 +647,10 @@ class ListEntry extends VBoxContainer:
 					MOUSE_BUTTON_LEFT:
 						# If `Add new` is clicked
 						if !resource:
-							set_edited_resource(Terrain3DTexture.new(), false)
+							if type == ListContainer.Type.TEXTURES:
+								set_edited_resource(Terrain3DTexture.new(), false)
+							else:
+								set_edited_resource(Terrain3DMeshInstance.new(), false)
 							edit()
 						else:
 							emit_signal("selected")
@@ -651,13 +680,13 @@ class ListEntry extends VBoxContainer:
 				var surf: Terrain3DTexture = Terrain3DTexture.new()
 				surf.set_albedo_texture(res)
 				set_edited_resource(surf, false)
-
 	
-	func set_edited_resource(p_res: Terrain3DTexture, p_no_signal: bool = true) -> void:
+	
+	func set_edited_resource(p_res: Resource, p_no_signal: bool = true) -> void:
 		resource = p_res
 		if resource:
-			resource.setting_changed.connect(_on_texture_changed)
-			resource.file_changed.connect(_on_texture_changed)
+			resource.setting_changed.connect(_on_resource_changed)
+			resource.file_changed.connect(_on_resource_changed)
 		
 		if button_clear:
 			button_clear.set_visible(resource != null)
@@ -667,7 +696,7 @@ class ListEntry extends VBoxContainer:
 			emit_signal("changed", resource)
 
 
-	func _on_texture_changed() -> void:
+	func _on_resource_changed() -> void:
 		emit_signal("changed", resource)
 
 

@@ -81,7 +81,7 @@ void Terrain3D::_initialize() {
 		_material->initialize(_storage->get_region_size());
 		_material->set_mesh_vertex_spacing(_mesh_vertex_spacing);
 		_storage->update_regions(true); // generate map arrays
-		_assets->update_list(); // generate texture arrays
+		_assets->update_lists(); // generate texture arrays
 		_instancer->initialize(this);
 		_setup_mouse_picking();
 		_build(_mesh_lods, _mesh_size);
@@ -1097,7 +1097,7 @@ void Terrain3D::set_texture_list(const Ref<Terrain3DTextureList> &p_texture_list
 	LOG(WARN, "Loaded Terrain3DTextureList. Converting to Terrain3DAssets. Save this scene to complete.");
 	Ref<Terrain3DAssets> assets;
 	assets.instantiate();
-	assets->set_textures(p_texture_list->get_textures());
+	assets->set_texture_list(p_texture_list->get_textures());
 	assets->take_over_path(p_texture_list->get_path());
 	set_assets(assets);
 }

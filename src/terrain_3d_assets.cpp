@@ -11,35 +11,73 @@
 // Private Functions
 ///////////////////////////
 
-void Terrain3DAssets::_swap_textures(int p_old_id, int p_new_id) {
-	if (p_old_id < 0 || p_old_id >= _textures.size()) {
+void Terrain3DAssets::_swap_textures(ResType p_type, int p_old_id, int p_new_id) {
+	LOG(MESG, "Swapping textures id: ", p_old_id, " and id:", p_new_id);
+	Array list;
+	switch (p_type) {
+		case TYPE_TEXTURE:
+			list = _texture_list;
+			break;
+		case TYPE_MESH:
+			list = _mesh_list;
+			break;
+		default:
+			return;
+	}
+
+	if (p_old_id < 0 || p_old_id >= list.size()) {
 		LOG(ERROR, "Old id out of range: ", p_old_id);
 		return;
 	}
-	Ref<Terrain3DTexture> texture_a = _textures[p_old_id];
-
-	p_new_id = CLAMP(p_new_id, 0, _textures.size() - 1);
+	Ref<Terrain3DAssetResource> res_a = list[p_old_id];
+	LOG(WARN, "res id: ", res_a->_id);
+	p_new_id = CLAMP(p_new_id, 0, list.size() - 1);
 	if (p_new_id == p_old_id) {
-		// Texture_a new id was likely out of range, reset it
-		texture_a->get_data()->_texture_id = p_old_id;
+		// Res_a new id was likely out of range, reset it
+		res_a->_id = p_old_id;
 		return;
 	}
 
-	LOG(DEBUG, "Swapping textures id: ", p_old_id, " and id:", p_new_id);
-	Ref<Terrain3DTexture> texture_b = _textures[p_new_id];
-	texture_a->get_data()->_texture_id = p_new_id;
-	texture_b->get_data()->_texture_id = p_old_id;
-	_textures[p_new_id] = texture_a;
-	_textures[p_old_id] = texture_b;
+	Ref<Terrain3DAssetResource> res_b = list[p_new_id];
+	res_a->_id = p_new_id;
+	res_b->_id = p_old_id;
+	list[p_new_id] = res_a;
+	list[p_old_id] = res_b;
 
-	update_list();
+	switch (p_type) {
+		case TYPE_TEXTURE:
+			update_texture_list();
+			break;
+		case TYPE_MESH:
+			break;
+		default:
+			return;
+	}
+
+	//Ref<Terrain3DTexture> texture_a = _texture_list[p_old_id];
+	//p_new_id = CLAMP(p_new_id, 0, _texture_list.size() - 1);
+	//if (p_new_id == p_old_id) {
+	//	// Texture_a new id was likely out of range, reset it
+	//	texture_a->_id = p_old_id;
+	//	return;
+	//}
+
+	//LOG(DEBUG, "Swapping textures id: ", p_old_id, " and id:", p_new_id);
+	//Ref<Terrain3DTexture> texture_b = _texture_list[p_new_id];
+	//texture_a->_id = p_new_id;
+	//texture_b->_id = p_old_id;
+	//_texture_list[p_new_id] = texture_a;
+	//_texture_list[p_old_id] = texture_b;
+
+	//update_texture_list();
 }
 
 void Terrain3DAssets::_update_texture_files() {
-	LOG(DEBUG, "Received texture_changed signal");
+	//LOG(DEBUG, "Received texture_changed signal");
+	LOG(MESG, "Received texture_changed signal");
 	_generated_albedo_textures.clear();
 	_generated_normal_textures.clear();
-	if (_textures.is_empty()) {
+	if (_texture_list.is_empty()) {
 		return;
 	}
 
@@ -54,8 +92,8 @@ void Terrain3DAssets::_update_texture_files() {
 	bool albedo_mipmaps = true;
 	bool normal_mipmaps = true;
 
-	for (int i = 0; i < _textures.size(); i++) {
-		Ref<Terrain3DTexture> texture_set = _textures[i];
+	for (int i = 0; i < _texture_list.size(); i++) {
+		Ref<Terrain3DTexture> texture_set = _texture_list[i];
 		if (texture_set.is_null()) {
 			continue;
 		}
@@ -117,18 +155,18 @@ void Terrain3DAssets::_update_texture_files() {
 	if (_generated_albedo_textures.is_dirty() && albedo_size != Vector2i(0, 0)) {
 		LOG(INFO, "Regenerating albedo texture array");
 		Array albedo_texture_array;
-		for (int i = 0; i < _textures.size(); i++) {
-			Ref<Terrain3DTexture> texture_set = _textures[i];
+		for (int i = 0; i < _texture_list.size(); i++) {
+			Ref<Terrain3DTexture> texture_set = _texture_list[i];
 			if (texture_set.is_null()) {
 				continue;
 			}
-			Ref<Texture2D> tex = texture_set->get_albedo_texture();
+			Ref<Texture2D> tex = texture_set->_albedo_texture;
 			Ref<Image> img;
 
 			if (tex.is_null()) {
 				img = Util::get_filled_image(albedo_size, COLOR_CHECKED, albedo_mipmaps, albedo_format);
 				LOG(DEBUG, "ID ", i, " albedo texture is null. Creating a new one. Format: ", img->get_format());
-				texture_set->get_data()->_albedo_texture = ImageTexture::create_from_image(img);
+				texture_set->_albedo_texture = ImageTexture::create_from_image(img);
 			} else {
 				img = tex->get_image();
 				LOG(DEBUG, "ID ", i, " albedo texture is valid. Format: ", img->get_format());
@@ -146,18 +184,18 @@ void Terrain3DAssets::_update_texture_files() {
 
 		Array normal_texture_array;
 
-		for (int i = 0; i < _textures.size(); i++) {
-			Ref<Terrain3DTexture> texture_set = _textures[i];
+		for (int i = 0; i < _texture_list.size(); i++) {
+			Ref<Terrain3DTexture> texture_set = _texture_list[i];
 			if (texture_set.is_null()) {
 				continue;
 			}
-			Ref<Texture2D> tex = texture_set->get_normal_texture();
+			Ref<Texture2D> tex = texture_set->_normal_texture;
 			Ref<Image> img;
 
 			if (tex.is_null()) {
 				img = Util::get_filled_image(normal_size, COLOR_NORMAL, normal_mipmaps, normal_format);
 				LOG(DEBUG, "ID ", i, " normal texture is null. Creating a new one. Format: ", img->get_format());
-				texture_set->get_data()->_normal_texture = ImageTexture::create_from_image(img);
+				texture_set->_normal_texture = ImageTexture::create_from_image(img);
 			} else {
 				img = tex->get_image();
 				LOG(DEBUG, "ID ", i, " Normal texture is valid. Format: ", img->get_format());
@@ -177,7 +215,7 @@ void Terrain3DAssets::_update_texture_files() {
 
 void Terrain3DAssets::_update_texture_settings() {
 	LOG(DEBUG, "Received setting_changed signal");
-	if (_textures.is_empty()) {
+	if (_texture_list.is_empty()) {
 		return;
 	}
 	LOG(INFO, "Updating terrain color and scale arrays");
@@ -185,8 +223,8 @@ void Terrain3DAssets::_update_texture_settings() {
 	_texture_uv_scales.clear();
 	_texture_uv_rotations.clear();
 
-	for (int i = 0; i < _textures.size(); i++) {
-		Ref<Terrain3DTexture> texture_set = _textures[i];
+	for (int i = 0; i < _texture_list.size(); i++) {
+		Ref<Terrain3DTexture> texture_set = _texture_list[i];
 		if (texture_set.is_null()) {
 			continue;
 		}
@@ -209,10 +247,75 @@ Terrain3DAssets::~Terrain3DAssets() {
 	_generated_normal_textures.clear();
 }
 
-void Terrain3DAssets::update_list() {
+void Terrain3DAssets::update_lists() {
+	update_mesh_list();
+	update_texture_list();
+}
+
+void Terrain3DAssets::update_mesh_list() {
+	LOG(INFO, "Reconnecting mesh instance signals");
+	for (int i = 0; i < _mesh_list.size(); i++) {
+		Ref<Terrain3DMeshInstance> mesh = _mesh_list[i];
+
+		if (mesh.is_null()) {
+			LOG(ERROR, "Mesh Instance at index ", i, " is null, but shouldn't be.");
+			continue;
+		}
+		if (!mesh->is_connected("file_changed", callable_mp(this, &Terrain3DAssets::_update_texture_files))) {
+			LOG(DEBUG, "Connecting file_changed signal");
+			mesh->connect("file_changed", callable_mp(this, &Terrain3DAssets::_update_texture_files));
+		}
+		//if (!mesh->is_connected("setting_changed", callable_mp(this, &Terrain3DAssets::_update_mesh_settings))) {
+		//	LOG(DEBUG, "Connecting setting_changed signal");
+		//	mesh->connect("setting_changed", callable_mp(this, &Terrain3DAssets::_update_mesh_settings));
+		//}
+	}
+}
+
+void Terrain3DAssets::set_mesh(int p_index, const Ref<Terrain3DMeshInstance> &p_mesh) {
+	LOG(INFO, "Setting mesh index: ", p_index);
+	if (p_index < 0 || p_index >= MAX_MESHES) {
+		LOG(ERROR, "Invalid mesh index: ", p_index, " range is 0-", MAX_MESHES);
+		return;
+	}
+	//Delete mesh
+	if (p_mesh.is_null()) {
+		// If final mesh, remove it
+		if (p_index == get_mesh_count() - 1) {
+			LOG(DEBUG, "Deleting mesh id: ", p_index);
+			_mesh_list.pop_back();
+		} else if (p_index < get_mesh_count()) {
+			// Else just clear it
+			Ref<Terrain3DMeshInstance> mesh = _mesh_list[p_index];
+			mesh->clear();
+			mesh->_id = p_index;
+		}
+	} else {
+		// Else Insert/Add mesh
+		// At end if a high number
+		if (p_index >= get_mesh_count()) {
+			p_mesh->_id = get_mesh_count();
+			_mesh_list.push_back(p_mesh);
+			if (!p_mesh->is_connected("id_changed", callable_mp(this, &Terrain3DAssets::_swap_textures))) {
+				LOG(DEBUG, "Connecting to id_changed");
+				p_mesh->connect("id_changed", callable_mp(this, &Terrain3DAssets::_swap_textures));
+			}
+		} else {
+			// Else overwrite an existing slot
+			_mesh_list[p_index] = p_mesh;
+		}
+	}
+	update_mesh_list();
+}
+
+void Terrain3DAssets::set_mesh_list(const TypedArray<Terrain3DMeshInstance> &p_mesh_list) {
+	LOG(INFO, "Setting mesh list");
+}
+
+void Terrain3DAssets::update_texture_list() {
 	LOG(INFO, "Reconnecting texture signals");
-	for (int i = 0; i < _textures.size(); i++) {
-		Ref<Terrain3DTexture> texture_set = _textures[i];
+	for (int i = 0; i < _texture_list.size(); i++) {
+		Ref<Terrain3DTexture> texture_set = _texture_list[i];
 
 		if (texture_set.is_null()) {
 			LOG(ERROR, "Texture at index ", i, " is null, but shouldn't be.");
@@ -244,53 +347,53 @@ void Terrain3DAssets::set_texture(int p_index, const Ref<Terrain3DTexture> &p_te
 		// If final texture, remove it
 		if (p_index == get_texture_count() - 1) {
 			LOG(DEBUG, "Deleting texture id: ", p_index);
-			_textures.pop_back();
+			_texture_list.pop_back();
 		} else if (p_index < get_texture_count()) {
 			// Else just clear it
-			Ref<Terrain3DTexture> texture = _textures[p_index];
+			Ref<Terrain3DTexture> texture = _texture_list[p_index];
 			texture->clear();
-			texture->get_data()->_texture_id = p_index;
+			texture->_id = p_index;
 		}
 	} else {
 		// Else Insert/Add Texture
 		// At end if a high number
 		if (p_index >= get_texture_count()) {
-			p_texture->get_data()->_texture_id = get_texture_count();
-			_textures.push_back(p_texture);
+			p_texture->_id = get_texture_count();
+			_texture_list.push_back(p_texture);
 			if (!p_texture->is_connected("id_changed", callable_mp(this, &Terrain3DAssets::_swap_textures))) {
 				LOG(DEBUG, "Connecting to id_changed");
 				p_texture->connect("id_changed", callable_mp(this, &Terrain3DAssets::_swap_textures));
 			}
 		} else {
 			// Else overwrite an existing slot
-			_textures[p_index] = p_texture;
+			_texture_list[p_index] = p_texture;
 		}
 	}
-	update_list();
+	update_texture_list();
 }
 
 /**
  * set_textures attempts to keep the texture_id as saved in the resource file.
  * But if an ID is invalid or already taken, the new ID is changed to the next available one
  */
-void Terrain3DAssets::set_textures(const TypedArray<Terrain3DTexture> &p_textures) {
-	LOG(INFO, "Setting textures");
-	int max_size = CLAMP(p_textures.size(), 0, MAX_TEXTURES);
-	_textures.resize(max_size);
+void Terrain3DAssets::set_texture_list(const TypedArray<Terrain3DTexture> &p_texture_list) {
+	LOG(INFO, "Setting texture list");
+	int max_size = CLAMP(p_texture_list.size(), 0, MAX_TEXTURES);
+	_texture_list.resize(max_size);
 	int filled_index = -1;
 	// For all provided textures up to MAX SIZE
 	for (int i = 0; i < max_size; i++) {
-		Ref<Terrain3DTexture> texture = p_textures[i];
-		int id = texture->get_texture_id();
+		Ref<Terrain3DTexture> texture = p_texture_list[i];
+		int id = texture->get_id();
 		// If saved texture id is in range and doesn't exist, add it
-		if (id >= 0 && id < max_size && !_textures[id]) {
-			_textures[id] = texture;
+		if (id >= 0 && id < max_size && !_texture_list[id]) {
+			_texture_list[id] = texture;
 		} else {
 			// Else texture id is invalid or slot is already taken, insert in next available
 			for (int j = filled_index + 1; j < max_size; j++) {
-				if (!_textures[j]) {
-					texture->set_texture_id(j);
-					_textures[j] = texture;
+				if (!_texture_list[j]) {
+					texture->set_id(j);
+					_texture_list[j] = texture;
 					filled_index = j;
 					break;
 				}
@@ -301,7 +404,7 @@ void Terrain3DAssets::set_textures(const TypedArray<Terrain3DTexture> &p_texture
 			texture->connect("id_changed", callable_mp(this, &Terrain3DAssets::_swap_textures));
 		}
 	}
-	update_list();
+	update_texture_list();
 }
 
 void Terrain3DAssets::save() {
@@ -321,18 +424,26 @@ void Terrain3DAssets::save() {
 ///////////////////////////
 
 void Terrain3DAssets::_bind_methods() {
+	BIND_CONSTANT(MAX_TEXTURES);
+
+	ClassDB::bind_method(D_METHOD("set_mesh", "index", "mesh"), &Terrain3DAssets::set_mesh);
+	ClassDB::bind_method(D_METHOD("get_mesh", "index"), &Terrain3DAssets::get_mesh);
+	ClassDB::bind_method(D_METHOD("set_mesh_list", "mesh_list"), &Terrain3DAssets::set_mesh_list);
+	ClassDB::bind_method(D_METHOD("get_mesh_list"), &Terrain3DAssets::get_mesh_list);
+	ClassDB::bind_method(D_METHOD("get_mesh_count"), &Terrain3DAssets::get_mesh_count);
+
 	ClassDB::bind_method(D_METHOD("set_texture", "index", "texture"), &Terrain3DAssets::set_texture);
 	ClassDB::bind_method(D_METHOD("get_texture", "index"), &Terrain3DAssets::get_texture);
-	ClassDB::bind_method(D_METHOD("set_textures", "textures"), &Terrain3DAssets::set_textures);
-	ClassDB::bind_method(D_METHOD("get_textures"), &Terrain3DAssets::get_textures);
+	ClassDB::bind_method(D_METHOD("set_texture_list", "texture_list"), &Terrain3DAssets::set_texture_list);
+	ClassDB::bind_method(D_METHOD("get_texture_list"), &Terrain3DAssets::get_texture_list);
 	ClassDB::bind_method(D_METHOD("get_texture_count"), &Terrain3DAssets::get_texture_count);
 
 	ClassDB::bind_method(D_METHOD("save"), &Terrain3DAssets::save);
 
 	int ro_flags = PROPERTY_USAGE_STORAGE | PROPERTY_USAGE_EDITOR | PROPERTY_USAGE_READ_ONLY;
-	ADD_PROPERTY(PropertyInfo(Variant::ARRAY, "textures", PROPERTY_HINT_ARRAY_TYPE, vformat("%tex_size/%tex_size:%tex_size", Variant::OBJECT, PROPERTY_HINT_RESOURCE_TYPE, "Terrain3DAssets"), ro_flags), "set_textures", "get_textures");
+	ADD_PROPERTY(PropertyInfo(Variant::ARRAY, "mesh_list", PROPERTY_HINT_ARRAY_TYPE, vformat("%tex_size/%tex_size:%tex_size", Variant::OBJECT, PROPERTY_HINT_RESOURCE_TYPE, "Terrain3DMeshInstance"), ro_flags), "set_mesh_list", "get_mesh_list");
+	ADD_PROPERTY(PropertyInfo(Variant::ARRAY, "texture_list", PROPERTY_HINT_ARRAY_TYPE, vformat("%tex_size/%tex_size:%tex_size", Variant::OBJECT, PROPERTY_HINT_RESOURCE_TYPE, "Terrain3DTexture"), ro_flags), "set_texture_list", "get_texture_list");
 
-	BIND_CONSTANT(MAX_TEXTURES);
-
+	ADD_SIGNAL(MethodInfo("meshes_changed"));
 	ADD_SIGNAL(MethodInfo("textures_changed"));
 }

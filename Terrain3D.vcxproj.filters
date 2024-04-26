@@ -42,7 +42,7 @@
     <ClInclude Include="src\terrain_3d_storage.h">
       <Filter>4. Headers</Filter>
     </ClInclude>
-    <ClInclude Include="src\terrain_3d_texture.h">
+    <ClInclude Include="src\terrain_3d_asset_resource.h">
       <Filter>4. Headers</Filter>
     </ClInclude>
     <ClInclude Include="src\terrain_3d_material.h">
@@ -61,6 +61,9 @@
       <Filter>4. Headers</Filter>
     </ClInclude>
     <ClInclude Include="src\terrain_3d_instancer.h">
+      <Filter>4. Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="src\terrain_3d_mesh_instance.h">
       <Filter>4. Headers</Filter>
     </ClInclude>
   </ItemGroup>
@@ -96,6 +99,9 @@
       <Filter>5. C++</Filter>
     </ClCompile>
     <ClCompile Include="src\terrain_3d_instancer.cpp">
+      <Filter>5. C++</Filter>
+    </ClCompile>
+    <ClCompile Include="src\terrain_3d_mesh_instance.cpp">
       <Filter>5. C++</Filter>
     </ClCompile>
   </ItemGroup>
