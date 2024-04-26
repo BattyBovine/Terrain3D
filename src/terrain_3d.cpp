@@ -81,7 +81,8 @@ void Terrain3D::_initialize() {
 		_material->initialize(_storage->get_region_size());
 		_material->set_mesh_vertex_spacing(_mesh_vertex_spacing);
 		_storage->update_regions(true); // generate map arrays
-		_assets->update_lists(); // generate texture arrays
+		_assets->update_texture_list(); // generate texture arrays
+		_assets->update_mesh_list();
 		_instancer->initialize(this);
 		_setup_mouse_picking();
 		_build(_mesh_lods, _mesh_size);

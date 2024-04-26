@@ -406,6 +406,7 @@ class ListContainer extends Container:
 	func update_asset_list(p_args: Array = Array()) -> void:
 		clear()
 		
+		# Grab terrain
 		var t: Terrain3D
 		if plugin.is_terrain_valid():
 			t = plugin.terrain
@@ -422,11 +423,15 @@ class ListContainer extends Container:
 			for i in texture_count:
 				var texture: Terrain3DTexture = t.assets.get_texture(i)
 				add_item(texture)
-				
 			if texture_count < Terrain3DAssets.MAX_TEXTURES:
 				add_item()
 		else:
-			add_item()
+			var mesh_count: int = t.assets.get_mesh_count()
+			for i in mesh_count:
+				var mesh: Terrain3DMeshInstance = t.assets.get_mesh(i)
+				add_item(mesh)				
+			if mesh_count < Terrain3DAssets.MAX_MESHES:
+				add_item()
 				
 
 	func add_item(p_resource: Resource = null) -> void:
@@ -461,7 +466,7 @@ class ListContainer extends Container:
 		
 		plugin.select_terrain()
 
-		# If not on a texture painting tool, then switch to Paint
+		# Select Paint tool if clicking a texture
 		if type == Type.TEXTURES and plugin.editor.get_tool() != Terrain3DEditor.TEXTURE:
 			var paint_btn: Button = plugin.ui.toolbar.get_node_or_null("PaintBaseTexture")
 			if paint_btn:
@@ -485,7 +490,7 @@ class ListContainer extends Container:
 			if type == Type.TEXTURES:
 				plugin.terrain.get_assets().set_texture(p_index, p_resource)
 			else:
-				pass
+				plugin.terrain.get_assets().set_mesh(p_index, p_resource)
 
 			# If removing last entry and its selected, clear inspector
 			if not p_resource and p_index == get_selected_index() and \
@@ -621,7 +626,8 @@ class ListEntry extends VBoxContainer:
 							texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST_WITH_MIPMAPS
 					else:
 						name_label.text = (resource as Terrain3DMeshInstance).get_name()
-						draw_rect(rect, Color(randf(),randf(),randf(),1.))
+						var id: float = (resource as Terrain3DMeshInstance).get_id()
+						draw_rect(rect, Color(id/10.,0,0,1.))
 				name_label.add_theme_font_size_override("font_size", 4 + rect.size.x/10)
 				if drop_data:
 					draw_style_box(focus_style, rect)

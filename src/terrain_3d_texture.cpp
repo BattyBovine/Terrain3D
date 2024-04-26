@@ -55,12 +55,9 @@ void Terrain3DTexture::set_name(String p_name) {
 }
 
 void Terrain3DTexture::set_id(int p_new_id) {
-	LOG(MESG, "Setting texture id: ", p_new_id);
+	LOG(INFO, "Setting texture id: ", p_new_id);
 	int old_id = _id;
 	_id = p_new_id;
-	//LOG(WARN, "Emitting: ", 0, " ", old_id, " ", p_new_id);
-	//emit_signal("id_changed", 0, old_id, p_new_id);
-	LOG(WARN, "Emitting: ", Terrain3DAssets::TYPE_TEXTURE, " ", old_id, " ", p_new_id);
 	emit_signal("id_changed", Terrain3DAssets::TYPE_TEXTURE, old_id, p_new_id);
 }
 

@@ -33,7 +33,10 @@ private:
 	PackedFloat32Array _texture_uv_scales;
 	PackedFloat32Array _texture_uv_rotations;
 
-	void _swap_textures(ResType p_type, int p_old_id, int p_new_id);
+	void _swap_ids(ResType p_type, int p_old_id, int p_new_id);
+	void _set_asset_list(ResType p_type, const TypedArray<Terrain3DAssetResource> &p_list);
+	void _set_asset(ResType p_type, int p_index, const Ref<Terrain3DAssetResource> &p_asset);
+
 	void _update_texture_files();
 	void _update_texture_settings();
 
@@ -41,15 +44,13 @@ public:
 	Terrain3DAssets();
 	~Terrain3DAssets();
 
-	void update_lists();
-	void update_mesh_list();
 	void set_mesh(int p_index, const Ref<Terrain3DMeshInstance> &p_mesh);
 	Ref<Terrain3DMeshInstance> get_mesh(int p_index) const { return _mesh_list[p_index]; }
 	void set_mesh_list(const TypedArray<Terrain3DMeshInstance> &p_mesh_list);
 	TypedArray<Terrain3DMeshInstance> get_mesh_list() const { return _mesh_list; }
 	int get_mesh_count() const { return _mesh_list.size(); }
+	void update_mesh_list();
 
-	void update_texture_list();
 	void set_texture(int p_index, const Ref<Terrain3DTexture> &p_texture);
 	Ref<Terrain3DTexture> get_texture(int p_index) const { return _texture_list[p_index]; }
 	void set_texture_list(const TypedArray<Terrain3DTexture> &p_texture_list);
@@ -60,6 +61,7 @@ public:
 	PackedColorArray get_texture_colors() { return _texture_colors; }
 	PackedFloat32Array get_texture_uv_scales() { return _texture_uv_scales; }
 	PackedFloat32Array get_texture_uv_rotations() { return _texture_uv_rotations; }
+	void update_texture_list();
 
 	void save();
 
