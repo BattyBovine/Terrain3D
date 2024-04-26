@@ -48,6 +48,7 @@ void Terrain3DAssets::_swap_ids(ResType p_type, int p_old_id, int p_new_id) {
 			update_texture_list();
 			break;
 		case TYPE_MESH:
+			emit_signal("meshes_changed");
 			break;
 		default:
 			return;

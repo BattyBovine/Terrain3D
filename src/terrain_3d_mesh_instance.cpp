@@ -1,32 +1,18 @@
 // Copyright © 2023 Cory Petkovsek, Roope Palmroos, and Contributors.
 
-//#include <godot_cpp/classes/image.hpp>
+#include <godot_cpp/classes/editor_interface.hpp>
+#include <godot_cpp/classes/editor_paths.hpp>
+#include <godot_cpp/classes/file_access.hpp>
+#include <godot_cpp/classes/image_texture.hpp>
+#include <godot_cpp/classes/material.hpp>
+#include <godot_cpp/classes/project_settings.hpp>
 
-#include "terrain_3d_mesh_instance.h"
 #include "logger.h"
+#include "terrain_3d_mesh_instance.h"
 
 ///////////////////////////
 // Private Functions
 ///////////////////////////
-
-//bool Terrain3DMeshInstance::_is_texture_valid(const Ref<Texture2D> &p_texture) const {
-//	if (p_texture.is_null()) {
-//		LOG(DEBUG, "Provided texture is null.");
-//		return true;
-//	}
-//
-//	Ref<Image> img = p_texture->get_image();
-//	Image::Format format = Image::FORMAT_MAX;
-//	if (img.is_valid()) {
-//		format = img->get_format();
-//	}
-//	if (format < 0 || format >= Image::FORMAT_MAX) {
-//		LOG(ERROR, "Invalid texture format. See documentation for format specification.");
-//		return false;
-//	}
-//
-//	return true;
-//}
 
 ///////////////////////////
 // Public Functions
@@ -56,39 +42,49 @@ void Terrain3DMeshInstance::set_id(int p_new_id) {
 	emit_signal("id_changed", Terrain3DAssets::TYPE_MESH, old_id, p_new_id);
 }
 
-void Terrain3DMeshInstance::set_scene(const Ref<PackedScene> p_scene) {
-	_packed_scene = p_scene;
+void Terrain3DMeshInstance::set_scene_file(const Ref<PackedScene> p_scene_file) {
+	LOG(MESG, "Setting scene file and instantiating node");
+	_packed_scene = p_scene_file;
+	if (_packed_scene.is_valid()) {
+		_scene_node = _packed_scene->instantiate();
+		LOG(DEBUG, "Loaded scene with parent node: ", _scene_node);
+		TypedArray<Node> mesh_instances = _scene_node->find_children("*", "MeshInstance3D");
+		_meshes.clear();
+		for (int i = 0; i < mesh_instances.size(); i++) {
+			MeshInstance3D *mi = Object::cast_to<MeshInstance3D>(mesh_instances[i]);
+			LOG(MESG, "Found mesh: ", mi->get_name());
+			Ref<Mesh> mesh = mi->get_mesh();
+			for (int j = 0; j < mi->get_surface_override_material_count(); j++) {
+				Ref<Material> mat = mi->get_active_material(j);
+				mesh->surface_set_material(j, mat);
+			}
+			_meshes.push_back(mesh);
+		}
+	}
 	emit_signal("file_changed");
 }
 
-//void Terrain3DMeshInstance::set_albedo_color(Color p_color) {
-//	_data._albedo_color = p_color;
-//	emit_signal("setting_changed");
-//}
-//
-//void Terrain3DMeshInstance::set_albedo_texture(const Ref<Texture2D> &p_texture) {
-//	if (_is_texture_valid(p_texture)) {
-//		_data._albedo_texture = p_texture;
-//		emit_signal("file_changed");
-//	}
-//}
-//
-//void Terrain3DMeshInstance::set_normal_texture(const Ref<Texture2D> &p_texture) {
-//	if (_is_texture_valid(p_texture)) {
-//		_data._normal_texture = p_texture;
-//		emit_signal("file_changed");
-//	}
-//}
-//
-//void Terrain3DMeshInstance::set_uv_scale(real_t p_scale) {
-//	_data._uv_scale = p_scale;
-//	emit_signal("setting_changed");
-//}
-//
-//void Terrain3DMeshInstance::set_uv_rotation(real_t p_rotation) {
-//	_data._uv_rotation = CLAMP(p_rotation, 0.0f, 1.0f);
-//	emit_signal("setting_changed");
-//}
+Ref<Texture2D> Terrain3DMeshInstance::get_thumbnail() const {
+	if (_packed_scene.is_null()) {
+		return Ref<Texture2D>();
+	}
+
+	// Copied from godot\editor\plugins\editor_preview_plugins.cpp:EditorPackedScenePreviewPlugin::generate_from_path
+	String scene_path = _packed_scene->get_path();
+	String temp_path = EditorInterface::get_singleton()->get_editor_paths()->get_cache_dir();
+	String cache_base = ProjectSettings::get_singleton()->globalize_path(scene_path).md5_text();
+	cache_base = temp_path.path_join("resthumb-" + cache_base);
+	String png_path = cache_base + ".png";
+	if (FileAccess::file_exists(png_path)) {
+		Ref<Image> img;
+		img.instantiate();
+		Error err = img->load(png_path);
+		if (err == OK) {
+			return ImageTexture::create_from_image(img);
+		}
+	}
+	return Ref<Texture2D>();
+}
 
 ///////////////////////////
 // Protected Functions
@@ -104,25 +100,11 @@ void Terrain3DMeshInstance::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("get_name"), &Terrain3DMeshInstance::get_name);
 	ClassDB::bind_method(D_METHOD("set_id", "id"), &Terrain3DMeshInstance::set_id);
 	ClassDB::bind_method(D_METHOD("get_id"), &Terrain3DMeshInstance::get_id);
-	ClassDB::bind_method(D_METHOD("set_scene", "scene"), &Terrain3DMeshInstance::set_scene);
-	ClassDB::bind_method(D_METHOD("get_scene"), &Terrain3DMeshInstance::get_scene);
-	//ClassDB::bind_method(D_METHOD("set_albedo_color", "color"), &Terrain3DMeshInstance::set_albedo_color);
-	//ClassDB::bind_method(D_METHOD("get_albedo_color"), &Terrain3DMeshInstance::get_albedo_color);
-	//ClassDB::bind_method(D_METHOD("set_albedo_texture", "texture"), &Terrain3DMeshInstance::set_albedo_texture);
-	//ClassDB::bind_method(D_METHOD("get_albedo_texture"), &Terrain3DMeshInstance::get_albedo_texture);
-	//ClassDB::bind_method(D_METHOD("set_normal_texture", "texture"), &Terrain3DMeshInstance::set_normal_texture);
-	//ClassDB::bind_method(D_METHOD("get_normal_texture"), &Terrain3DMeshInstance::get_normal_texture);
-	//ClassDB::bind_method(D_METHOD("set_uv_scale", "scale"), &Terrain3DMeshInstance::set_uv_scale);
-	//ClassDB::bind_method(D_METHOD("get_uv_scale"), &Terrain3DMeshInstance::get_uv_scale);
-	//ClassDB::bind_method(D_METHOD("set_uv_rotation", "scale"), &Terrain3DMeshInstance::set_uv_rotation);
-	//ClassDB::bind_method(D_METHOD("get_uv_rotation"), &Terrain3DMeshInstance::get_uv_rotation);
+	ClassDB::bind_method(D_METHOD("set_scene_file", "scene_file"), &Terrain3DMeshInstance::set_scene_file);
+	ClassDB::bind_method(D_METHOD("get_scene_file"), &Terrain3DMeshInstance::get_scene_file);
+	ClassDB::bind_method(D_METHOD("get_thumbnail"), &Terrain3DMeshInstance::get_thumbnail);
 
 	ADD_PROPERTY(PropertyInfo(Variant::STRING, "name", PROPERTY_HINT_NONE), "set_name", "get_name");
 	ADD_PROPERTY(PropertyInfo(Variant::INT, "id", PROPERTY_HINT_NONE), "set_id", "get_id");
-	ADD_PROPERTY(PropertyInfo(Variant::OBJECT, "scene", PROPERTY_HINT_NONE), "set_scene", "get_scene");
-	//ADD_PROPERTY(PropertyInfo(Variant::COLOR, "albedo_color", PROPERTY_HINT_COLOR_NO_ALPHA), "set_albedo_color", "get_albedo_color");
-	//ADD_PROPERTY(PropertyInfo(Variant::OBJECT, "albedo_texture", PROPERTY_HINT_RESOURCE_TYPE, "ImageTexture,CompressedTexture2D"), "set_albedo_texture", "get_albedo_texture");
-	//ADD_PROPERTY(PropertyInfo(Variant::OBJECT, "normal_texture", PROPERTY_HINT_RESOURCE_TYPE, "ImageTexture,CompressedTexture2D"), "set_normal_texture", "get_normal_texture");
-	//ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "uv_scale", PROPERTY_HINT_RANGE, "0.001, 2.0"), "set_uv_scale", "get_uv_scale");
-	//ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "uv_rotation", PROPERTY_HINT_RANGE, "0.0, 1.0"), "set_uv_rotation", "get_uv_rotation");
+	ADD_PROPERTY(PropertyInfo(Variant::OBJECT, "scene_file", PROPERTY_HINT_RESOURCE_TYPE, "PackedScene"), "set_scene_file", "get_scene_file");
 }

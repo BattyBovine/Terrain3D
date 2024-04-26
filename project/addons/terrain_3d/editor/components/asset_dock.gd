@@ -245,6 +245,8 @@ func _on_textures_pressed() -> void:
 	mesh_list.visible = false
 	textures_btn.button_pressed = true
 	meshes_btn.button_pressed = false
+	texture_list.set_selected_index(texture_list.selected_index)
+	plugin.get_editor_interface().edit_node(plugin.terrain)
 
 
 func _on_meshes_pressed() -> void:
@@ -254,6 +256,8 @@ func _on_meshes_pressed() -> void:
 	texture_list.visible = false
 	meshes_btn.button_pressed = true
 	textures_btn.button_pressed = false
+	mesh_list.set_selected_index(mesh_list.selected_index)
+	plugin.get_editor_interface().edit_node(plugin.terrain)
 
 
 ## Update Dock Contents
@@ -403,7 +407,7 @@ class ListContainer extends Container:
 		entries.clear()
 
 
-	func update_asset_list(p_args: Array = Array()) -> void:
+	func update_asset_list(p_assets: Terrain3DAssets = null) -> void:
 		clear()
 		
 		# Grab terrain
@@ -472,6 +476,13 @@ class ListContainer extends Container:
 			if paint_btn:
 				paint_btn.set_pressed(true)
 				plugin.ui._on_tool_changed(Terrain3DEditor.TEXTURE, Terrain3DEditor.REPLACE)
+
+		elif type == Type.MESHES and plugin.editor.get_tool() != Terrain3DEditor.FOLIAGE:
+			var foliage_btn: Button = plugin.ui.toolbar.get_node_or_null("PaintFoliage")
+			if foliage_btn:
+				foliage_btn.set_pressed(true)
+				plugin.ui._on_tool_changed(Terrain3DEditor.FOLIAGE, Terrain3DEditor.ADD)
+		
 		# Update editor with selected brush
 		plugin.ui._on_setting_changed()
 
@@ -557,6 +568,7 @@ class ListEntry extends VBoxContainer:
 	
 	var resource: Resource
 	var type := ListContainer.Type.TEXTURES
+	var _thumbnail: Texture2D
 	var drop_data: bool = false
 	var is_hovered: bool = false
 	var is_selected: bool = false
@@ -620,19 +632,24 @@ class ListEntry extends VBoxContainer:
 					if type == ListContainer.Type.TEXTURES:
 						name_label.text = (resource as Terrain3DTexture).get_name()
 						self_modulate = resource.get_albedo_color()
-						var texture: Texture2D = resource.get_albedo_texture()
-						if texture:
-							draw_texture_rect(texture, rect, false)
+						_thumbnail = resource.get_albedo_texture()
+						if _thumbnail:
+							draw_texture_rect(_thumbnail, rect, false)
 							texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST_WITH_MIPMAPS
 					else:
 						name_label.text = (resource as Terrain3DMeshInstance).get_name()
 						var id: float = (resource as Terrain3DMeshInstance).get_id()
-						draw_rect(rect, Color(id/10.,0,0,1.))
+						_thumbnail = resource.get_thumbnail()
+						if _thumbnail:
+							draw_texture_rect(_thumbnail, rect, false)
+							texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
+						else:
+							draw_rect(rect, Color(.15, .15, .15, 1.))
 				name_label.add_theme_font_size_override("font_size", 4 + rect.size.x/10)
 				if drop_data:
 					draw_style_box(focus_style, rect)
 				if is_hovered:
-					draw_rect(rect, Color(1,1,1,0.2))
+					draw_rect(rect, Color(1, 1, 1, 0.2))
 				if is_selected:
 					draw_style_box(focus_style, rect)
 			NOTIFICATION_MOUSE_ENTER:

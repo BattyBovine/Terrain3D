@@ -5,6 +5,7 @@
 
 #include <godot_cpp/classes/packed_scene.hpp>
 #include <godot_cpp/classes/resource.hpp>
+#include <godot_cpp/classes/texture2d.hpp>
 
 #include "constants.h"
 #include "terrain_3d_asset_resource.h"
@@ -17,18 +18,14 @@ class Terrain3DMeshInstance : public Terrain3DAssetResource {
 	friend class Terrain3DAssets;
 
 private:
-	//String _name;
-	//int _id = 0;
 	Ref<PackedScene> _packed_scene;
-
-	//bool _is_texture_valid(const Ref<Texture2D> &p_texture) const;
+	Node *_scene_node = nullptr;
+	TypedArray<Mesh> _meshes;
 
 public:
 	Terrain3DMeshInstance();
 	~Terrain3DMeshInstance();
 
-	// Edit data directly to avoid signal emitting recursion
-	//Settings *get_data() { return &_data; }
 	void clear();
 
 	void set_name(String p_name);
@@ -37,23 +34,10 @@ public:
 	void set_id(int p_new_id);
 	int get_id() const { return _id; }
 
-	void set_scene(const Ref<PackedScene> p_scene);
-	Ref<PackedScene> get_scene() const { return _packed_scene; }
+	void set_scene_file(const Ref<PackedScene> p_scene_file);
+	Ref<PackedScene> get_scene_file() const { return _packed_scene; }
 
-	//void set_albedo_color(Color p_color);
-	//Color get_albedo_color() const { return _data._albedo_color; }
-
-	//void set_albedo_texture(const Ref<Texture2D> &p_texture);
-	//Ref<Texture2D> get_albedo_texture() const { return _data._albedo_texture; }
-
-	//void set_normal_texture(const Ref<Texture2D> &p_texture);
-	//Ref<Texture2D> get_normal_texture() const { return _data._normal_texture; }
-
-	//void set_uv_scale(real_t p_scale);
-	//real_t get_uv_scale() const { return _data._uv_scale; }
-
-	//void set_uv_rotation(real_t p_rotation);
-	//real_t get_uv_rotation() const { return _data._uv_rotation; }
+	Ref<Texture2D> get_thumbnail() const;
 
 protected:
 	static void _bind_methods();
