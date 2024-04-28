@@ -94,8 +94,6 @@ Methods
    +--------------------------------------------------------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
    | :ref:`Image<class_Image>`                              | :ref:`layered_to_image<class_Terrain3DStorage_method_layered_to_image>`\ (\ map_type\: :ref:`MapType<enum_Terrain3DStorage_MapType>`\ )                                                                                                                                                         |
    +--------------------------------------------------------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
-   | :ref:`Image<class_Image>`                              | :ref:`load_image<class_Terrain3DStorage_method_load_image>`\ (\ file_name\: :ref:`String<class_String>`, cache_mode\: :ref:`int<class_int>` = 0, r16_height_range\: :ref:`Vector2<class_Vector2>` = Vector2(0, 255), r16_size\: :ref:`Vector2i<class_Vector2i>` = Vector2i(0, 0)\ ) |static|    |
-   +--------------------------------------------------------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
    | |void|                                                 | :ref:`remove_region<class_Terrain3DStorage_method_remove_region>`\ (\ global_position\: :ref:`Vector3<class_Vector3>`, update\: :ref:`bool<class_bool>` = true\ )                                                                                                                               |
    +--------------------------------------------------------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
    | |void|                                                 | :ref:`save<class_Terrain3DStorage_method_save>`\ (\ )                                                                                                                                                                                                                                           |
@@ -739,26 +737,6 @@ Imports an Image set (Height, Control, Color) into this resource. It does NOT no
 :ref:`Image<class_Image>` **layered_to_image**\ (\ map_type\: :ref:`MapType<enum_Terrain3DStorage_MapType>`\ )
 
 Returns an Image of the given map type that contains all regions in one large image. If the world has multiple islands, this function will return an image large enough to encompass all used regions, with black areas in between the islands.
-
-.. rst-class:: classref-item-separator
-
-----
-
-.. _class_Terrain3DStorage_method_load_image:
-
-.. rst-class:: classref-method
-
-:ref:`Image<class_Image>` **load_image**\ (\ file_name\: :ref:`String<class_String>`, cache_mode\: :ref:`int<class_int>` = 0, r16_height_range\: :ref:`Vector2<class_Vector2>` = Vector2(0, 255), r16_size\: :ref:`Vector2i<class_Vector2i>` = Vector2i(0, 0)\ ) |static|
-
-Loads a file from disk and returns an Image.
-
-\ ``filename`` - The file name on disk to load. Loads EXR, R16/RAW, PNG, or a ResourceLoader format (jpg, res, tres, etc).
-
-\ ``cache_mode`` - Send this flag to the resource loader to force caching or not.
-
-\ ``height_range`` - Heights for R16 format. x=Min & y=Max value ranges. Required for R16 import.
-
-\ ``size`` - Image dimensions for R16 format. Default (0,0) auto detects size, assuming square images. Required for non-square R16.
 
 .. rst-class:: classref-item-separator
 
