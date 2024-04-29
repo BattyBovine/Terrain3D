@@ -57,6 +57,7 @@ void Terrain3DStorage::set_height_range(Vector2 p_range) {
 }
 
 void Terrain3DStorage::update_heights(real_t p_height) {
+	LOG(DEBUG, "Updating heights: ", p_height, " (modified)");
 	if (p_height < _height_range.x) {
 		_height_range.x = p_height;
 	} else if (p_height > _height_range.y) {
@@ -66,6 +67,7 @@ void Terrain3DStorage::update_heights(real_t p_height) {
 }
 
 void Terrain3DStorage::update_heights(Vector2 p_heights) {
+	LOG(DEBUG, "Updating heights: ", p_heights, " (modified)");
 	if (p_heights.x < _height_range.x) {
 		_height_range.x = p_heights.x;
 	}

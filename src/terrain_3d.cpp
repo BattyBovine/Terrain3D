@@ -74,7 +74,8 @@ void Terrain3D::_initialize() {
 	//	LOG(DEBUG, "Connecting height_maps_changed signal to update_aabbs()");
 	//	_storage->connect("height_maps_changed", callable_mp(this, &Terrain3D::update_aabbs));
 	//}
-	// Make sure still connected after new storage
+
+	// TODO Make sure still connected after new storage
 
 	// Initialize the system
 	if (!_initialized && _is_inside_world && is_inside_tree()) {

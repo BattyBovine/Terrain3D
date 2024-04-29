@@ -112,7 +112,7 @@ inline bool is_auto(uint32_t pixel) { return (pixel & 0x1) == 1; }
 inline bool is_auto(float pixel) { return is_auto(as_uint(pixel)); }
 inline uint32_t enc_auto(bool autosh) { return autosh & 0x1; }
 
-// Aliases for GDScript
+// Aliases for GDScript since it can't handle overridden functions
 inline uint32_t gd_get_base(uint32_t pixel) { return get_base(pixel); }
 inline uint32_t gd_enc_base(uint32_t base) { return enc_base(base); }
 inline uint32_t gd_get_overlay(uint32_t pixel) { return get_overlay(pixel); }

@@ -395,7 +395,7 @@ void Terrain3DEditor::_operate_map(Vector3 p_global_position, real_t p_camera_di
 							enc_nav(navigation) | enc_auto(autoshader);
 
 					// Write back to pixel in FORMAT_RF. Must be a 32-bit float
-					dest = Color(*(float *)&bits, 0.f, 0.f, 1.f);
+					dest = Color(as_float(bits), 0.f, 0.f, 1.f);
 
 				} else if (map_type == Terrain3DStorage::TYPE_COLOR) {
 					switch (_tool) {
