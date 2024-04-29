@@ -70,9 +70,9 @@ void Terrain3D::_initialize() {
 		LOG(DEBUG, "Connecting height_maps_changed signal to update_aabbs()");
 		_storage->connect("height_maps_changed", callable_mp(this, &Terrain3D::update_aabbs));
 	}
-	//if (!_storage->is_connected("edited_area", Callable(_instancer.ptr(), "update_aabbs"))) {
+	//if (!_storage->is_connected("edited_area", callable_mp(_instancer.ptr(), &Terrain3D::update_aabbs))) {
 	//	LOG(DEBUG, "Connecting height_maps_changed signal to update_aabbs()");
-	//	_storage->connect("height_maps_changed", Callable(this, "update_aabbs"));
+	//	_storage->connect("height_maps_changed", callable_mp(this, &Terrain3D::update_aabbs));
 	//}
 	// Make sure still connected after new storage
 

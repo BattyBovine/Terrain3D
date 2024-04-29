@@ -28,7 +28,7 @@ void Terrain3DEditor::Brush::set_data(Dictionary p_data) {
 	_size = p_data["size"];
 	_strength = p_data["strength"];
 	_height = p_data["height"];
-	_texture_index = p_data["texture_index"];
+	_asset_index = p_data["asset_index"];
 	_color = p_data["color"];
 	_roughness = p_data["roughness"];
 	_gradient_points = p_data["gradient_points"];
@@ -133,7 +133,7 @@ void Terrain3DEditor::_operate_map(Vector3 p_global_position, real_t p_camera_di
 
 	Ref<Image> map = storage->get_map_region(map_type, region_index);
 	int brush_size = _brush.get_size();
-	int texture_id = _brush.get_texture_index();
+	int asset_id = _brush.get_asset_index();
 	Vector2i img_size = _brush.get_image_size();
 	real_t strength = _brush.get_strength();
 	real_t height = _brush.get_height();
@@ -332,7 +332,7 @@ void Terrain3DEditor::_operate_map(Vector3 p_global_position, real_t p_camera_di
 					bool autoshader = is_auto(src.r);
 
 					real_t alpha_clip = (brush_alpha > 0.1f) ? 1.f : 0.f;
-					uint32_t dest_id = uint32_t(Math::lerp(base_id, texture_id, alpha_clip));
+					uint32_t dest_id = uint32_t(Math::lerp(base_id, asset_id, alpha_clip));
 
 					switch (_tool) {
 						case TEXTURE:

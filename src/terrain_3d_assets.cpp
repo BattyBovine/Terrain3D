@@ -11,7 +11,7 @@
 // Private Functions
 ///////////////////////////
 
-void Terrain3DAssets::_swap_ids(ResType p_type, int p_old_id, int p_new_id) {
+void Terrain3DAssets::_swap_ids(AssetType p_type, int p_old_id, int p_new_id) {
 	LOG(INFO, "Swapping asset id: ", p_old_id, " and id:", p_new_id);
 	Array list;
 	switch (p_type) {
@@ -59,7 +59,7 @@ void Terrain3DAssets::_swap_ids(ResType p_type, int p_old_id, int p_new_id) {
  * _set_asset_list attempts to keep the asset id as saved in the resource file.
  * But if an ID is invalid or already taken, the new ID is changed to the next available one
  */
-void Terrain3DAssets::_set_asset_list(ResType p_type, const TypedArray<Terrain3DAssetResource> &p_list) {
+void Terrain3DAssets::_set_asset_list(AssetType p_type, const TypedArray<Terrain3DAssetResource> &p_list) {
 	Array list;
 	int max_size;
 	switch (p_type) {
@@ -103,7 +103,7 @@ void Terrain3DAssets::_set_asset_list(ResType p_type, const TypedArray<Terrain3D
 	}
 }
 
-void Terrain3DAssets::_set_asset(ResType p_type, int p_index, const Ref<Terrain3DAssetResource> &p_asset) {
+void Terrain3DAssets::_set_asset(AssetType p_type, int p_index, const Ref<Terrain3DAssetResource> &p_asset) {
 	Array list;
 	int max_size;
 	switch (p_type) {
@@ -410,6 +410,8 @@ void Terrain3DAssets::save() {
 ///////////////////////////
 
 void Terrain3DAssets::_bind_methods() {
+	BIND_ENUM_CONSTANT(TYPE_TEXTURE);
+	BIND_ENUM_CONSTANT(TYPE_MESH);
 	BIND_CONSTANT(MAX_TEXTURES);
 	BIND_CONSTANT(MAX_MESHES);
 

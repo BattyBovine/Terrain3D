@@ -74,11 +74,11 @@ func initialize(p_plugin: EditorPlugin) -> void:
 
 	texture_list = ListContainer.new()
 	texture_list.plugin = plugin
-	texture_list.type = ListContainer.Type.TEXTURES
+	texture_list.type = Terrain3DAssets.TYPE_TEXTURE
 	asset_container.add_child(texture_list)
 	mesh_list = ListContainer.new()
 	mesh_list.plugin = plugin
-	mesh_list.type = ListContainer.Type.MESHES
+	mesh_list.type = Terrain3DAssets.TYPE_MESH
 	mesh_list.visible = false
 	asset_container.add_child(mesh_list)
 	_current_list = texture_list
@@ -115,6 +115,10 @@ func _ready() -> void:
 		pinned_btn.text = ""
 		floating_btn.icon = get_theme_icon("MakeFloating", "EditorIcons")
 		floating_btn.text = ""
+
+
+func get_current_list() -> ListContainer:
+	return _current_list
 
 
 ## Dock placement
@@ -381,10 +385,8 @@ func save_project_settings() -> void:
 
 	
 class ListContainer extends Container:
-	enum Type { TEXTURES, MESHES }
-	
 	var plugin: EditorPlugin
-	var type: Type = Type.TEXTURES
+	var type := Terrain3DAssets.TYPE_TEXTURE
 	var entries: Array[ListEntry]
 	var selected_index: int = 0
 	var height: float = 0
@@ -422,7 +424,7 @@ class ListContainer extends Container:
 		if not t.assets:
 			return
 		
-		if type == Type.TEXTURES:
+		if type == Terrain3DAssets.TYPE_TEXTURE:
 			var texture_count: int = t.assets.get_texture_count()
 			for i in texture_count:
 				var texture: Terrain3DTexture = t.assets.get_texture(i)
@@ -457,11 +459,11 @@ class ListContainer extends Container:
 				p_resource.id_changed.connect(set_selected_after_swap)
 
 	
-	func set_selected_after_swap(p_type: int, p_old_index: int, p_new_index: int) -> void:
+	func set_selected_after_swap(p_type: Terrain3DAssets.AssetType, p_old_index: int, p_new_index: int) -> void:
 		set_selected_index(clamp(p_new_index, 0, entries.size() - 2))
 
 
-	func set_selected_index(p_index: int) -> void:
+	func set_selected_index(p_index: Terrain3DAssets.AssetType) -> void:
 		selected_index = p_index
 		
 		for i in entries.size():
@@ -471,13 +473,13 @@ class ListContainer extends Container:
 		plugin.select_terrain()
 
 		# Select Paint tool if clicking a texture
-		if type == Type.TEXTURES and plugin.editor.get_tool() != Terrain3DEditor.TEXTURE:
+		if type == Terrain3DAssets.TYPE_TEXTURE and plugin.editor.get_tool() != Terrain3DEditor.TEXTURE:
 			var paint_btn: Button = plugin.ui.toolbar.get_node_or_null("PaintBaseTexture")
 			if paint_btn:
 				paint_btn.set_pressed(true)
 				plugin.ui._on_tool_changed(Terrain3DEditor.TEXTURE, Terrain3DEditor.REPLACE)
 
-		elif type == Type.MESHES and plugin.editor.get_tool() != Terrain3DEditor.FOLIAGE:
+		elif type == Terrain3DAssets.TYPE_MESH and plugin.editor.get_tool() != Terrain3DEditor.FOLIAGE:
 			var foliage_btn: Button = plugin.ui.toolbar.get_node_or_null("PaintFoliage")
 			if foliage_btn:
 				foliage_btn.set_pressed(true)
@@ -498,7 +500,7 @@ class ListContainer extends Container:
 			await get_tree().create_timer(.01).timeout
 			
 		if plugin.is_terrain_valid():
-			if type == Type.TEXTURES:
+			if type == Terrain3DAssets.TYPE_TEXTURE:
 				plugin.terrain.get_assets().set_texture(p_index, p_resource)
 			else:
 				plugin.terrain.get_assets().set_mesh(p_index, p_resource)
@@ -567,7 +569,7 @@ class ListEntry extends VBoxContainer:
 	signal inspected(resource: Resource)
 	
 	var resource: Resource
-	var type := ListContainer.Type.TEXTURES
+	var type := Terrain3DAssets.TYPE_TEXTURE
 	var _thumbnail: Texture2D
 	var drop_data: bool = false
 	var is_hovered: bool = false
@@ -615,7 +617,7 @@ class ListEntry extends VBoxContainer:
 		name_label.add_theme_font_size_override("font_size", 15)
 		name_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		name_label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
-		if type == ListContainer.Type.TEXTURES:
+		if type == Terrain3DAssets.TYPE_TEXTURE:
 			name_label.text = "Add Texture"
 		else:
 			name_label.text = "Add Mesh"
@@ -629,7 +631,7 @@ class ListEntry extends VBoxContainer:
 					draw_style_box(background, rect)
 					draw_texture(add_icon, (get_size() / 2) - (add_icon.get_size() / 2))
 				else:
-					if type == ListContainer.Type.TEXTURES:
+					if type == Terrain3DAssets.TYPE_TEXTURE:
 						name_label.text = (resource as Terrain3DTexture).get_name()
 						self_modulate = resource.get_albedo_color()
 						_thumbnail = resource.get_albedo_texture()
@@ -670,7 +672,7 @@ class ListEntry extends VBoxContainer:
 					MOUSE_BUTTON_LEFT:
 						# If `Add new` is clicked
 						if !resource:
-							if type == ListContainer.Type.TEXTURES:
+							if type == Terrain3DAssets.TYPE_TEXTURE:
 								set_edited_resource(Terrain3DTexture.new(), false)
 							else:
 								set_edited_resource(Terrain3DMeshInstance.new(), false)

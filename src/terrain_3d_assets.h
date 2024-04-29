@@ -15,7 +15,7 @@ class Terrain3DAssets : public Resource {
 	CLASS_NAME();
 
 public: // Constants
-	enum ResType {
+	enum AssetType {
 		TYPE_TEXTURE,
 		TYPE_MESH,
 	};
@@ -33,9 +33,9 @@ private:
 	PackedFloat32Array _texture_uv_scales;
 	PackedFloat32Array _texture_uv_rotations;
 
-	void _swap_ids(ResType p_type, int p_old_id, int p_new_id);
-	void _set_asset_list(ResType p_type, const TypedArray<Terrain3DAssetResource> &p_list);
-	void _set_asset(ResType p_type, int p_index, const Ref<Terrain3DAssetResource> &p_asset);
+	void _swap_ids(AssetType p_type, int p_old_id, int p_new_id);
+	void _set_asset_list(AssetType p_type, const TypedArray<Terrain3DAssetResource> &p_list);
+	void _set_asset(AssetType p_type, int p_index, const Ref<Terrain3DAssetResource> &p_asset);
 
 	void _update_texture_files();
 	void _update_texture_settings();
@@ -69,7 +69,7 @@ protected:
 	static void _bind_methods();
 };
 
-VARIANT_ENUM_CAST(Terrain3DAssets::ResType);
+VARIANT_ENUM_CAST(Terrain3DAssets::AssetType);
 
 // Deprecated 0.9.1 - Remove Later
 class Terrain3DTextureList : public Resource {

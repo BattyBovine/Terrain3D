@@ -73,7 +73,7 @@ public: // Constants
 		int _size = 0;
 		real_t _strength = 0.0f;
 		real_t _height = 0.0f;
-		int _texture_index = 0;
+		int _asset_index = 0;
 		Color _color = COLOR_ROUGHNESS;
 		real_t _roughness = 0.5f;
 		PackedVector3Array _gradient_points;
@@ -95,7 +95,7 @@ public: // Constants
 		int get_size() const { return _size; }
 		real_t get_strength() const { return _strength; }
 		real_t get_height() const { return _height; }
-		int get_texture_index() const { return _texture_index; }
+		int get_asset_index() const { return _asset_index; }
 		Color get_color() const { return _color; }
 		real_t get_roughness() const { return _roughness; }
 		PackedVector3Array get_gradient_points() const { return _gradient_points; }
