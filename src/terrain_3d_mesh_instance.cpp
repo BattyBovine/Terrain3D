@@ -43,7 +43,7 @@ void Terrain3DMeshInstance::set_id(int p_new_id) {
 }
 
 void Terrain3DMeshInstance::set_scene_file(const Ref<PackedScene> p_scene_file) {
-	LOG(MESG, "Setting scene file and instantiating node");
+	LOG(INFO, "Setting scene file and instantiating node");
 	_packed_scene = p_scene_file;
 	if (_packed_scene.is_valid()) {
 		_scene_node = _packed_scene->instantiate();
@@ -52,7 +52,10 @@ void Terrain3DMeshInstance::set_scene_file(const Ref<PackedScene> p_scene_file) 
 		_meshes.clear();
 		for (int i = 0; i < mesh_instances.size(); i++) {
 			MeshInstance3D *mi = Object::cast_to<MeshInstance3D>(mesh_instances[i]);
-			LOG(MESG, "Found mesh: ", mi->get_name());
+			LOG(DEBUG, "Found mesh: ", mi->get_name());
+			if (_name == "New Mesh") {
+				_name = _packed_scene->get_path().get_file().get_basename();
+			}
 			Ref<Mesh> mesh = mi->get_mesh();
 			for (int j = 0; j < mi->get_surface_override_material_count(); j++) {
 				Ref<Material> mat = mi->get_active_material(j);

@@ -9,7 +9,8 @@
 // Private Functions
 ///////////////////////////
 
-bool Terrain3DTexture::_is_texture_valid(const Ref<Texture2D> &p_texture) const {
+// Note a null texture is considered a valid format
+bool Terrain3DTexture::_is_valid_format(const Ref<Texture2D> &p_texture) const {
 	if (p_texture.is_null()) {
 		LOG(DEBUG, "Provided texture is null.");
 		return true;
@@ -67,14 +68,17 @@ void Terrain3DTexture::set_albedo_color(Color p_color) {
 }
 
 void Terrain3DTexture::set_albedo_texture(const Ref<Texture2D> &p_texture) {
-	if (_is_texture_valid(p_texture)) {
+	if (_is_valid_format(p_texture)) {
 		_albedo_texture = p_texture;
+		if (p_texture.is_valid() && _name == "New Texture") {
+			_name = p_texture->get_path().get_file().get_basename();
+		}
 		emit_signal("file_changed");
 	}
 }
 
 void Terrain3DTexture::set_normal_texture(const Ref<Texture2D> &p_texture) {
-	if (_is_texture_valid(p_texture)) {
+	if (_is_valid_format(p_texture)) {
 		_normal_texture = p_texture;
 		emit_signal("file_changed");
 	}
@@ -126,5 +130,5 @@ void Terrain3DTexture::_bind_methods() {
 	//DEPRECATED 0.9.2
 	ClassDB::bind_method(D_METHOD("set_texture_id", "id"), &Terrain3DTexture::set_id);
 	ClassDB::bind_method(D_METHOD("get_texture_id"), &Terrain3DTexture::get_id);
-	ADD_PROPERTY(PropertyInfo(Variant::INT, "texture_id", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_NO_EDITOR), "set_texture_id", "get_texture_id");
+	ADD_PROPERTY(PropertyInfo(Variant::INT, "texture_id", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_NONE), "set_texture_id", "get_texture_id");
 }
