@@ -44,13 +44,6 @@ public:
 	Terrain3DAssets();
 	~Terrain3DAssets();
 
-	void set_mesh(int p_index, const Ref<Terrain3DMeshInstance> &p_mesh);
-	Ref<Terrain3DMeshInstance> get_mesh(int p_index) const { return _mesh_list[p_index]; }
-	void set_mesh_list(const TypedArray<Terrain3DMeshInstance> &p_mesh_list);
-	TypedArray<Terrain3DMeshInstance> get_mesh_list() const { return _mesh_list; }
-	int get_mesh_count() const { return _mesh_list.size(); }
-	void update_mesh_list();
-
 	void set_texture(int p_index, const Ref<Terrain3DTexture> &p_texture);
 	Ref<Terrain3DTexture> get_texture(int p_index) const { return _texture_list[p_index]; }
 	void set_texture_list(const TypedArray<Terrain3DTexture> &p_texture_list);
@@ -62,6 +55,13 @@ public:
 	PackedFloat32Array get_texture_uv_scales() { return _texture_uv_scales; }
 	PackedFloat32Array get_texture_uv_rotations() { return _texture_uv_rotations; }
 	void update_texture_list();
+
+	void set_mesh(int p_index, const Ref<Terrain3DMeshInstance> &p_mesh);
+	Ref<Terrain3DMeshInstance> get_mesh(int p_index) const { return _mesh_list[p_index]; }
+	void set_mesh_list(const TypedArray<Terrain3DMeshInstance> &p_mesh_list);
+	TypedArray<Terrain3DMeshInstance> get_mesh_list() const { return _mesh_list; }
+	int get_mesh_count() const { return _mesh_list.size(); }
+	void update_mesh_list();
 
 	void save();
 
