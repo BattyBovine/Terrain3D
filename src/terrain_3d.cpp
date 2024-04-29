@@ -58,6 +58,10 @@ void Terrain3D::_initialize() {
 		LOG(DEBUG, "Connecting _assets.textures_changed to _material->_update_texture_arrays()");
 		_assets->connect("textures_changed", callable_mp(_material.ptr(), &Terrain3DMaterial::_update_texture_arrays));
 	}
+	if (!_assets->is_connected("meshes_changed", callable_mp(_instancer.ptr(), &Terrain3DInstancer::_update_meshes))) {
+		LOG(DEBUG, "Connecting _assets.meshes_changed to _instancer->_update_meshes()");
+		_assets->connect("meshes_changed", callable_mp(_instancer.ptr(), &Terrain3DInstancer::_update_meshes));
+	}
 	if (!_storage->is_connected("region_size_changed", callable_mp(_material.ptr(), &Terrain3DMaterial::_set_region_size))) {
 		LOG(DEBUG, "Connecting region_size_changed signal to _material->_set_region_size()");
 		_storage->connect("region_size_changed", callable_mp(_material.ptr(), &Terrain3DMaterial::_set_region_size));

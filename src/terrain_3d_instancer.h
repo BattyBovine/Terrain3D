@@ -15,17 +15,22 @@ class Terrain3D;
 class Terrain3DInstancer : public Resource {
 	GDCLASS(Terrain3DInstancer, Resource);
 	CLASS_NAME();
+	friend Terrain3D;
 
 	Terrain3D *_terrain = nullptr;
+
+	TypedArray<MultiMeshInstance3D> _mmis;
+	TypedArray<MultiMesh> _mms;
 
 	MultiMeshInstance3D *_multimesh_instance = nullptr;
 	Ref<MultiMesh> _multimesh;
 
-	Dictionary _instances;
+	Dictionary _instances; // Storage for MMI saved to disk
 	//TypedArray<Terrain3DInstance> _instances;
 
 	void _set_instances(Dictionary p_instances);
 	Dictionary _get_instances() { return _instances; }
+	void _update_meshes(Ref<Terrain3DAssets> p_assets);
 
 public:
 	Terrain3DInstancer();

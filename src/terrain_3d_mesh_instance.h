@@ -19,7 +19,7 @@ class Terrain3DMeshInstance : public Terrain3DAssetResource {
 
 private:
 	Ref<PackedScene> _packed_scene;
-	Node *_scene_node = nullptr;
+	Node *_scene_node = nullptr; // TODO Do we need this?
 	TypedArray<Mesh> _meshes;
 
 public:
@@ -33,6 +33,9 @@ public:
 
 	void set_id(int p_new_id);
 	int get_id() const { return _id; }
+
+	Ref<Mesh> get_mesh(int p_id = 0);
+	int get_mesh_count() { return _meshes.size(); }
 
 	void set_scene_file(const Ref<PackedScene> p_scene_file);
 	Ref<PackedScene> get_scene_file() const { return _packed_scene; }

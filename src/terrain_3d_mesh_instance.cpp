@@ -42,6 +42,13 @@ void Terrain3DMeshInstance::set_id(int p_new_id) {
 	emit_signal("id_changed", Terrain3DAssets::TYPE_MESH, old_id, p_new_id);
 }
 
+Ref<Mesh> Terrain3DMeshInstance::get_mesh(int p_id) {
+	if (p_id >= 0 && p_id < _meshes.size()) {
+		return _meshes[p_id];
+	}
+	return Ref<Mesh>();
+}
+
 void Terrain3DMeshInstance::set_scene_file(const Ref<PackedScene> p_scene_file) {
 	LOG(INFO, "Setting scene file and instantiating node");
 	_packed_scene = p_scene_file;
@@ -103,6 +110,8 @@ void Terrain3DMeshInstance::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("get_name"), &Terrain3DMeshInstance::get_name);
 	ClassDB::bind_method(D_METHOD("set_id", "id"), &Terrain3DMeshInstance::set_id);
 	ClassDB::bind_method(D_METHOD("get_id"), &Terrain3DMeshInstance::get_id);
+	ClassDB::bind_method(D_METHOD("get_mesh", "id"), &Terrain3DMeshInstance::get_mesh, DEFVAL(0));
+	ClassDB::bind_method(D_METHOD("get_mesh_count"), &Terrain3DMeshInstance::get_mesh_count);
 	ClassDB::bind_method(D_METHOD("set_scene_file", "scene_file"), &Terrain3DMeshInstance::set_scene_file);
 	ClassDB::bind_method(D_METHOD("get_scene_file"), &Terrain3DMeshInstance::get_scene_file);
 	ClassDB::bind_method(D_METHOD("get_thumbnail"), &Terrain3DMeshInstance::get_thumbnail);

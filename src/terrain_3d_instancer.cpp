@@ -29,6 +29,29 @@ void Terrain3DInstancer::_set_instances(Dictionary p_instances) {
 	}
 }
 
+void Terrain3DInstancer::_update_meshes(Ref<Terrain3DAssets> p_assets) {
+	LOG(MESG, "Recieved meshes_changed signal");
+	if (p_assets.is_null()) {
+		return;
+	}
+	LOG(MESG, "Have ", p_assets->get_mesh_count(), " t3d mesh instances:");
+	TypedArray<Terrain3DMeshInstance> mesh_list = p_assets->get_mesh_list();
+	for (int i = 0; i < mesh_list.size(); i++) {
+		Ref<Terrain3DMeshInstance> mi = mesh_list[i];
+		if (mi.is_null()) {
+			LOG(WARN, i, ": Received null Terrain3DMeshInstance");
+			continue;
+		}
+		LOG(MESG, i, ": Mesh count: ", mi->get_mesh_count());
+		Ref<Mesh> mesh = mi->get_mesh();
+		if (mesh.is_null()) {
+			LOG(WARN, i, ": Received null Mesh");
+			continue;
+		}
+		LOG(MESG, i, ": AABB: ", mesh->get_aabb());
+	}
+}
+
 ///////////////////////////
 // Public Functions
 ///////////////////////////

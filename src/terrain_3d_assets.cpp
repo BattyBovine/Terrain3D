@@ -48,7 +48,7 @@ void Terrain3DAssets::_swap_ids(AssetType p_type, int p_old_id, int p_new_id) {
 			update_texture_list();
 			break;
 		case TYPE_MESH:
-			emit_signal("meshes_changed");
+			update_mesh_list();
 			break;
 		default:
 			return;
@@ -381,16 +381,16 @@ void Terrain3DAssets::update_mesh_list() {
 			LOG(ERROR, "Mesh Instance at index ", i, " is null, but shouldn't be.");
 			continue;
 		}
-		//if (!mesh->is_connected("file_changed", callable_mp(this, &Terrain3DAssets::_update_texture_files))) {
-		//	LOG(DEBUG, "Connecting file_changed signal");
-		//	mesh->connect("file_changed", callable_mp(this, &Terrain3DAssets::_update_texture_files));
-		//}
+		if (!mesh->is_connected("file_changed", callable_mp(this, &Terrain3DAssets::update_mesh_list))) {
+			LOG(DEBUG, "Connecting file_changed signal");
+			mesh->connect("file_changed", callable_mp(this, &Terrain3DAssets::update_mesh_list));
+		}
 		//if (!mesh->is_connected("setting_changed", callable_mp(this, &Terrain3DAssets::_update_mesh_settings))) {
 		//	LOG(DEBUG, "Connecting setting_changed signal");
 		//	mesh->connect("setting_changed", callable_mp(this, &Terrain3DAssets::_update_mesh_settings));
 		//}
 	}
-	emit_signal("meshes_changed");
+	emit_signal("meshes_changed", Ref<Terrain3DAssets>(this));
 }
 
 void Terrain3DAssets::save() {
